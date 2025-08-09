@@ -235,7 +235,12 @@ function i2zq:CreateWindow(config)
     CloseButton.ImageRectSize = Vector2.new(24, 24)
     CloseButton.ImageColor3 = Theme.Text.Secondary
     CloseButton.Position = UDim2.new(1, -42, 0.5, -16)
-    for k,v in pairs(buttonConfig) do CloseButton[k] = v end
+    for k,v in pairs(buttonConfig) do
+        if k ~= "Text" then -- لا تحط خاصية Text على ImageButton
+            CloseButton[k] = v
+        end
+    end
+
     
     -- Minimize Button
     local MinimizeButton = Instance.new("ImageButton")
