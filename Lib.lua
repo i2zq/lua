@@ -251,7 +251,12 @@ function i2zq:CreateWindow(config)
     MinimizeButton.ImageRectSize = Vector2.new(24, 24)
     MinimizeButton.ImageColor3 = Theme.Text.Secondary
     MinimizeButton.Position = UDim2.new(1, -84, 0.5, -16)
-    for k,v in pairs(buttonConfig) do MinimizeButton[k] = v end
+    for k, v in pairs(buttonConfig) do
+        if k ~= "Text" then
+            MinimizeButton[k] = v
+        end
+    end
+
     
     -- Content Frame
     local ContentFrame = Instance.new("Frame")
