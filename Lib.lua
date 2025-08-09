@@ -1,51 +1,70 @@
--- i2zq Library v1.0
--- The Ultimate Roblox UI Framework
--- Created for sleek, modern interfaces with black/purple theme
+-- i2zq Library v2.0
+-- Modern Roblox UI Framework with Glassmorphism Effects
+-- Enhanced black/purple theme with depth and animations
 
 local i2zq = {}
 local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
+local TextService = game:GetService("TextService")
 
 local Player = Players.LocalPlayer
 local PlayerGui = Player:WaitForChild("PlayerGui")
 
--- Theme Configuration
+-- Enhanced Theme Configuration
 local Theme = {
     Primary = {
-        Background = Color3.fromRGB(15, 15, 20),
-        Surface = Color3.fromRGB(25, 25, 35),
-        Elevated = Color3.fromRGB(35, 35, 50),
-        Border = Color3.fromRGB(60, 60, 80)
+        Background = Color3.fromRGB(10, 10, 15),
+        Surface = Color3.fromRGB(20, 20, 28),
+        Elevated = Color3.fromRGB(28, 28, 40),
+        Border = Color3.fromRGB(50, 50, 70)
     },
     Purple = {
         Main = Color3.fromRGB(138, 43, 226),
-        Light = Color3.fromRGB(155, 89, 182),
-        Dark = Color3.fromRGB(102, 51, 153),
+        Light = Color3.fromRGB(160, 100, 220),
+        Dark = Color3.fromRGB(90, 40, 140),
         Glow = Color3.fromRGB(186, 85, 211)
     },
     Text = {
         Primary = Color3.fromRGB(255, 255, 255),
-        Secondary = Color3.fromRGB(200, 200, 220),
-        Muted = Color3.fromRGB(150, 150, 170)
+        Secondary = Color3.fromRGB(210, 210, 230),
+        Muted = Color3.fromRGB(160, 160, 180)
     },
     Transparency = {
         None = 0,
         Light = 0.1,
         Medium = 0.3,
-        Heavy = 0.6
+        Heavy = 0.6,
+        Glass = 0.85  -- New glass effect transparency
     }
 }
 
--- Animation Presets
+-- Smoother Animation Presets
 local Animations = {
-    Fast = TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-    Medium = TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-    Slow = TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-    Bounce = TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
-    Smooth = TweenInfo.new(0.2, Enum.EasingStyle.Sine, Enum.EasingDirection.Out)
+    Fast = TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+    Medium = TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+    Slow = TweenInfo.new(0.35, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+    Bounce = TweenInfo.new(0.25, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
+    Smooth = TweenInfo.new(0.18, Enum.EasingStyle.Sine, Enum.EasingDirection.Out),
+    Elastic = TweenInfo.new(0.3, Enum.EasingStyle.Elastic, Enum.EasingDirection.Out, 0, false, 0)
 }
+
+-- Glassmorphism Effect
+local function CreateGlassEffect(parent)
+    local glass = Instance.new("Frame")
+    glass.Name = "GlassEffect"
+    glass.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    glass.BackgroundTransparency = Theme.Transparency.Glass
+    glass.Size = UDim2.new(1, 0, 1, 0)
+    glass.ZIndex = parent.ZIndex - 1
+    
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 12)
+    corner.Parent = glass
+    
+    return glass
+end
 
 -- Utility Functions
 local function CreateCorner(radius)
@@ -54,11 +73,12 @@ local function CreateCorner(radius)
     return corner
 end
 
-local function CreateStroke(color, thickness)
+local function CreateStroke(color, thickness, transparency)
     local stroke = Instance.new("UIStroke")
-    stroke.Color = color or Theme.Primary.Border
+    stroke.Color = color or Theme.Purple.Main
     stroke.Thickness = thickness or 1
-    stroke.Transparency = 0.5
+    stroke.Transparency = transparency or 0.5
+    stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
     return stroke
 end
 
@@ -69,18 +89,19 @@ local function CreateGradient(colorSequence, rotation)
     return gradient
 end
 
-local function CreateShadow(parent, intensity)
+local function CreateShadow(parent, intensity, sizeMultiplier)
     local shadow = Instance.new("ImageLabel")
     shadow.Name = "Shadow"
     shadow.Parent = parent
     shadow.BackgroundTransparency = 1
-    shadow.Image = "rbxasset://textures/ui/GuiImagePlaceholder.png"
+    shadow.Image = "rbxassetid://1316045217"  -- Better shadow texture
     shadow.ImageColor3 = Color3.fromRGB(0, 0, 0)
     shadow.ImageTransparency = 1 - (intensity or 0.3)
-    shadow.Size = UDim2.new(1, 10, 1, 10)
-    shadow.Position = UDim2.new(0, -5, 0, -5)
+    shadow.ScaleType = Enum.ScaleType.Slice
+    shadow.SliceCenter = Rect.new(10, 10, 118, 118)
+    shadow.Size = UDim2.new(1, sizeMultiplier or 20, 1, sizeMultiplier or 20)
+    shadow.Position = UDim2.new(0, -(sizeMultiplier or 20)/2, 0, -(sizeMultiplier or 20)/2)
     shadow.ZIndex = parent.ZIndex - 1
-    CreateCorner(12).Parent = shadow
     return shadow
 end
 
@@ -89,14 +110,30 @@ local function CreateGlow(parent, color)
     glow.Name = "Glow"
     glow.Parent = parent
     glow.BackgroundTransparency = 1
-    glow.Image = "rbxasset://textures/ui/GuiImagePlaceholder.png"
+    glow.Image = "rbxassetid://4996891970"  -- Soft glow texture
     glow.ImageColor3 = color or Theme.Purple.Glow
-    glow.ImageTransparency = 0.8
-    glow.Size = UDim2.new(1, 20, 1, 20)
-    glow.Position = UDim2.new(0, -10, 0, -10)
+    glow.ImageTransparency = 0.7
+    glow.Size = UDim2.new(1.4, 0, 1.4, 0)
+    glow.Position = UDim2.new(-0.2, 0, -0.2, 0)
     glow.ZIndex = parent.ZIndex - 1
-    CreateCorner(16).Parent = glow
     return glow
+end
+
+-- Hover effect for interactive elements
+local function ApplyHoverEffect(element)
+    element.MouseEnter:Connect(function()
+        TweenService:Create(element, Animations.Fast, {
+            BackgroundColor3 = Theme.Purple.Main,
+            BackgroundTransparency = Theme.Transparency.Medium
+        }):Play()
+    end)
+    
+    element.MouseLeave:Connect(function()
+        TweenService:Create(element, Animations.Fast, {
+            BackgroundColor3 = Theme.Primary.Surface,
+            BackgroundTransparency = Theme.Transparency.Light
+        }):Play()
+    end)
 end
 
 -- Main Library Functions
@@ -113,7 +150,16 @@ function i2zq:CreateWindow(config)
     ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
     ScreenGui.ResetOnSpawn = false
     
-    -- Main Frame
+    -- Glass Background Effect
+    local GlassFrame = Instance.new("Frame")
+    GlassFrame.Name = "GlassFrame"
+    GlassFrame.Parent = ScreenGui
+    GlassFrame.Size = UDim2.new(1, 0, 1, 0)
+    GlassFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 25)
+    GlassFrame.BackgroundTransparency = 0.9
+    GlassFrame.ZIndex = 90
+    
+    -- Main Frame with Glassmorphism
     local MainFrame = Instance.new("Frame")
     MainFrame.Name = "MainFrame"
     MainFrame.Parent = ScreenGui
@@ -125,23 +171,27 @@ function i2zq:CreateWindow(config)
     MainFrame.Active = true
     MainFrame.Draggable = true
     
-    CreateCorner(12).Parent = MainFrame
-    CreateStroke(Theme.Purple.Main, 2).Parent = MainFrame
-    CreateShadow(MainFrame, 0.5)
+    -- Add glass effect
+    local glass = CreateGlassEffect(MainFrame)
+    glass.Parent = MainFrame
+    
+    CreateCorner(14).Parent = MainFrame
+    CreateStroke(Theme.Purple.Main, 1.5, 0.6).Parent = MainFrame
+    CreateShadow(MainFrame, 0.4, 25)
     CreateGlow(MainFrame, Theme.Purple.Glow)
     
-    -- Title Bar
+    -- Title Bar with Gradient
     local TitleBar = Instance.new("Frame")
     TitleBar.Name = "TitleBar"
     TitleBar.Parent = MainFrame
     TitleBar.BackgroundColor3 = Theme.Primary.Elevated
-    TitleBar.BackgroundTransparency = Theme.Transparency.Light
-    TitleBar.Size = UDim2.new(1, 0, 0, 40)
+    TitleBar.BackgroundTransparency = 0
+    TitleBar.Size = UDim2.new(1, 0, 0, 42)
     TitleBar.Position = UDim2.new(0, 0, 0, 0)
     TitleBar.ZIndex = 101
     
-    CreateCorner(12).Parent = TitleBar
-    CreateStroke(Theme.Primary.Border, 1).Parent = TitleBar
+    CreateCorner(14, 14, 0, 0).Parent = TitleBar
+    CreateStroke(Theme.Purple.Dark, 1, 0.7).Parent = TitleBar
     
     -- Title gradient
     local titleGradient = CreateGradient(
@@ -149,8 +199,9 @@ function i2zq:CreateWindow(config)
             ColorSequenceKeypoint.new(0, Theme.Purple.Dark),
             ColorSequenceKeypoint.new(1, Theme.Purple.Main)
         }),
-        45
+        90
     )
+    titleGradient.Transparency = NumberSequence.new(0.3)
     titleGradient.Parent = TitleBar
     
     -- Title Text
@@ -162,42 +213,40 @@ function i2zq:CreateWindow(config)
     TitleText.Position = UDim2.new(0, 15, 0, 0)
     TitleText.Text = WindowName
     TitleText.TextColor3 = Theme.Text.Primary
-    TitleText.TextScaled = true
+    TitleText.TextSize = 18
     TitleText.TextXAlignment = Enum.TextXAlignment.Left
-    TitleText.Font = Enum.Font.GothamBold
+    TitleText.Font = Enum.Font.GothamSemibold
     TitleText.ZIndex = 102
     
+    -- Modern Icon Buttons
+    local buttonConfig = {
+        Size = UDim2.new(0, 32, 0, 32),
+        BackgroundTransparency = 1,
+        Text = "",
+        ZIndex = 102
+    }
+    
     -- Close Button
-    local CloseButton = Instance.new("TextButton")
+    local CloseButton = Instance.new("ImageButton")
     CloseButton.Name = "CloseButton"
     CloseButton.Parent = TitleBar
-    CloseButton.BackgroundColor3 = Theme.Primary.Surface
-    CloseButton.BackgroundTransparency = Theme.Transparency.Medium
-    CloseButton.Size = UDim2.new(0, 30, 0, 30)
-    CloseButton.Position = UDim2.new(1, -40, 0, 5)
-    CloseButton.Text = "×"
-    CloseButton.TextColor3 = Theme.Text.Primary
-    CloseButton.TextScaled = true
-    CloseButton.Font = Enum.Font.GothamBold
-    CloseButton.ZIndex = 102
-    
-    CreateCorner(6).Parent = CloseButton
+    CloseButton.Image = "rbxassetid://3926305904"
+    CloseButton.ImageRectOffset = Vector2.new(284, 4)
+    CloseButton.ImageRectSize = Vector2.new(24, 24)
+    CloseButton.ImageColor3 = Theme.Text.Secondary
+    CloseButton.Position = UDim2.new(1, -42, 0.5, -16)
+    for k,v in pairs(buttonConfig) do CloseButton[k] = v end
     
     -- Minimize Button
-    local MinimizeButton = Instance.new("TextButton")
+    local MinimizeButton = Instance.new("ImageButton")
     MinimizeButton.Name = "MinimizeButton"
     MinimizeButton.Parent = TitleBar
-    MinimizeButton.BackgroundColor3 = Theme.Primary.Surface
-    MinimizeButton.BackgroundTransparency = Theme.Transparency.Medium
-    MinimizeButton.Size = UDim2.new(0, 30, 0, 30)
-    MinimizeButton.Position = UDim2.new(1, -75, 0, 5)
-    MinimizeButton.Text = "−"
-    MinimizeButton.TextColor3 = Theme.Text.Primary
-    MinimizeButton.TextScaled = true
-    MinimizeButton.Font = Enum.Font.GothamBold
-    MinimizeButton.ZIndex = 102
-    
-    CreateCorner(6).Parent = MinimizeButton
+    MinimizeButton.Image = "rbxassetid://3926305904"
+    MinimizeButton.ImageRectOffset = Vector2.new(364, 284)
+    MinimizeButton.ImageRectSize = Vector2.new(24, 24)
+    MinimizeButton.ImageColor3 = Theme.Text.Secondary
+    MinimizeButton.Position = UDim2.new(1, -84, 0.5, -16)
+    for k,v in pairs(buttonConfig) do MinimizeButton[k] = v end
     
     -- Content Frame
     local ContentFrame = Instance.new("Frame")
@@ -217,12 +266,18 @@ function i2zq:CreateWindow(config)
     ScrollFrame.Position = UDim2.new(0, 0, 0, 0)
     ScrollFrame.ScrollBarThickness = 4
     ScrollFrame.ScrollBarImageColor3 = Theme.Purple.Main
+    ScrollFrame.ScrollBarImageTransparency = 0.6
     ScrollFrame.ZIndex = 101
     
     local UIListLayout = Instance.new("UIListLayout")
     UIListLayout.Parent = ScrollFrame
     UIListLayout.SortOrder = Enum.SortOrder.LayoutOrder
-    UIListLayout.Padding = UDim.new(0, 8)
+    UIListLayout.Padding = UDim.new(0, 10)
+    
+    local UIPadding = Instance.new("UIPadding")
+    UIPadding.Parent = ScrollFrame
+    UIPadding.PaddingTop = UDim.new(0, 5)
+    UIPadding.PaddingBottom = UDim.new(0, 5)
     
     -- Window Object
     local Window = {
@@ -234,48 +289,64 @@ function i2zq:CreateWindow(config)
     }
     
     -- Button Animations
-    local function animateButton(button)
+    local function animateIconButton(button)
         button.MouseEnter:Connect(function()
             TweenService:Create(button, Animations.Fast, {
-                BackgroundTransparency = 0,
-                BackgroundColor3 = Theme.Purple.Main
+                ImageColor3 = Theme.Text.Primary,
+                Rotation = 5
             }):Play()
         end)
         
         button.MouseLeave:Connect(function()
             TweenService:Create(button, Animations.Fast, {
-                BackgroundTransparency = Theme.Transparency.Medium,
-                BackgroundColor3 = Theme.Primary.Surface
+                ImageColor3 = Theme.Text.Secondary,
+                Rotation = 0
+            }):Play()
+        end)
+        
+        button.MouseButton1Down:Connect(function()
+            TweenService:Create(button, Animations.Fast, {
+                Size = UDim2.new(0, 28, 0, 28),
+                Position = UDim2.new(button.Position.X.Scale, button.Position.X.Offset + 2, button.Position.Y.Scale, button.Position.Y.Offset + 2)
+            }):Play()
+        end)
+        
+        button.MouseButton1Up:Connect(function()
+            TweenService:Create(button, Animations.Fast, {
+                Size = UDim2.new(0, 32, 0, 32),
+                Position = UDim2.new(button.Position.X.Scale, button.Position.X.Offset - 2, button.Position.Y.Scale, button.Position.Y.Offset - 2)
             }):Play()
         end)
     end
     
-    animateButton(CloseButton)
-    animateButton(MinimizeButton)
+    animateIconButton(CloseButton)
+    animateIconButton(MinimizeButton)
     
     -- Button Functionality
     CloseButton.MouseButton1Click:Connect(function()
-        TweenService:Create(MainFrame, Animations.Medium, {
+        TweenService:Create(MainFrame, Animations.Elastic, {
             Size = UDim2.new(0, 0, 0, 0),
             BackgroundTransparency = 1
         }):Play()
         
-        wait(0.3)
+        TweenService:Create(glass, Animations.Elastic, {
+            BackgroundTransparency = 1
+        }):Play()
+        
+        wait(0.35)
         ScreenGui:Destroy()
     end)
     
     MinimizeButton.MouseButton1Click:Connect(function()
         if not Window.IsMinimized then
-            TweenService:Create(MainFrame, Animations.Medium, {
-                Size = UDim2.new(Window.OriginalSize.X.Scale, Window.OriginalSize.X.Offset, 0, 40)
+            TweenService:Create(MainFrame, Animations.Bounce, {
+                Size = UDim2.new(Window.OriginalSize.X.Scale, Window.OriginalSize.X.Offset, 0, 42)
             }):Play()
-            MinimizeButton.Text = "+"
             Window.IsMinimized = true
         else
-            TweenService:Create(MainFrame, Animations.Medium, {
+            TweenService:Create(MainFrame, Animations.Bounce, {
                 Size = Window.OriginalSize
             }):Play()
-            MinimizeButton.Text = "−"
             Window.IsMinimized = false
         end
     end)
@@ -291,51 +362,41 @@ function i2zq:CreateWindow(config)
         Button.Parent = self.ContentFrame
         Button.BackgroundColor3 = Theme.Primary.Surface
         Button.BackgroundTransparency = Theme.Transparency.Light
-        Button.Size = UDim2.new(1, -10, 0, 40)
+        Button.Size = UDim2.new(1, -10, 0, 42)
         Button.Text = ButtonName
         Button.TextColor3 = Theme.Text.Primary
-        Button.TextScaled = true
+        Button.TextSize = 16
         Button.Font = Enum.Font.Gotham
         Button.ZIndex = 102
+        Button.AutoButtonColor = false
         
-        CreateCorner(8).Parent = Button
-        CreateStroke(Theme.Purple.Main, 1).Parent = Button
+        CreateCorner(10).Parent = Button
+        CreateStroke(Theme.Purple.Main, 1, 0.7).Parent = Button
         
-        -- Button animations
-        Button.MouseEnter:Connect(function()
+        -- Hover effect
+        ApplyHoverEffect(Button)
+        
+        -- Click animation
+        Button.MouseButton1Down:Connect(function()
             TweenService:Create(Button, Animations.Fast, {
-                BackgroundColor3 = Theme.Purple.Main,
-                BackgroundTransparency = Theme.Transparency.None
+                Size = UDim2.new(1, -15, 0, 38)
             }):Play()
         end)
         
-        Button.MouseLeave:Connect(function()
+        Button.MouseButton1Up:Connect(function()
             TweenService:Create(Button, Animations.Fast, {
-                BackgroundColor3 = Theme.Primary.Surface,
-                BackgroundTransparency = Theme.Transparency.Light
+                Size = UDim2.new(1, -10, 0, 42)
             }):Play()
         end)
         
-        Button.MouseButton1Click:Connect(function()
-            -- Click animation
-            TweenService:Create(Button, Animations.Fast, {
-                Size = UDim2.new(1, -15, 0, 35)
-            }):Play()
-            
-            wait(0.1)
-            
-            TweenService:Create(Button, Animations.Fast, {
-                Size = UDim2.new(1, -10, 0, 40)
-            }):Play()
-            
-            ButtonCallback()
-        end)
+        Button.MouseButton1Click:Connect(ButtonCallback)
         
         self.ContentFrame.CanvasSize = UDim2.new(0, 0, 0, UIListLayout.AbsoluteContentSize.Y)
         
         return Button
     end
     
+    -- Updated Toggle with modern design
     function Window:AddToggle(config)
         config = config or {}
         local ToggleName = config.Name or "Toggle"
@@ -350,8 +411,8 @@ function i2zq:CreateWindow(config)
         ToggleFrame.Size = UDim2.new(1, -10, 0, 40)
         ToggleFrame.ZIndex = 102
         
-        CreateCorner(8).Parent = ToggleFrame
-        CreateStroke(Theme.Primary.Border, 1).Parent = ToggleFrame
+        CreateCorner(10).Parent = ToggleFrame
+        CreateStroke(Theme.Primary.Border, 1, 0.7).Parent = ToggleFrame
         
         local ToggleLabel = Instance.new("TextLabel")
         ToggleLabel.Parent = ToggleFrame
@@ -360,41 +421,38 @@ function i2zq:CreateWindow(config)
         ToggleLabel.Position = UDim2.new(0, 15, 0, 0)
         ToggleLabel.Text = ToggleName
         ToggleLabel.TextColor3 = Theme.Text.Primary
-        ToggleLabel.TextScaled = true
+        ToggleLabel.TextSize = 16
         ToggleLabel.TextXAlignment = Enum.TextXAlignment.Left
         ToggleLabel.Font = Enum.Font.Gotham
         ToggleLabel.ZIndex = 103
         
+        local ToggleContainer = Instance.new("Frame")
+        ToggleContainer.Parent = ToggleFrame
+        ToggleContainer.BackgroundColor3 = Theme.Primary.Background
+        ToggleContainer.Size = UDim2.new(0, 50, 0, 26)
+        ToggleContainer.Position = UDim2.new(1, -55, 0.5, -13)
+        ToggleContainer.ZIndex = 103
+        CreateCorner(13).Parent = ToggleContainer
+        
         local ToggleButton = Instance.new("TextButton")
-        ToggleButton.Parent = ToggleFrame
-        ToggleButton.BackgroundColor3 = DefaultValue and Theme.Purple.Main or Theme.Primary.Background
-        ToggleButton.Size = UDim2.new(0, 40, 0, 20)
-        ToggleButton.Position = UDim2.new(1, -50, 0.5, -10)
+        ToggleButton.Parent = ToggleContainer
+        ToggleButton.BackgroundColor3 = DefaultValue and Theme.Purple.Main or Theme.Primary.Elevated
+        ToggleButton.Size = UDim2.new(0, 22, 0, 22)
+        ToggleButton.Position = DefaultValue and UDim2.new(1, -23, 0.5, -11) or UDim2.new(0, 2, 0.5, -11)
         ToggleButton.Text = ""
-        ToggleButton.ZIndex = 103
+        ToggleButton.ZIndex = 104
+        CreateCorner(11).Parent = ToggleButton
         
-        CreateCorner(10).Parent = ToggleButton
-        
-        local ToggleSlider = Instance.new("Frame")
-        ToggleSlider.Parent = ToggleButton
-        ToggleSlider.BackgroundColor3 = Theme.Text.Primary
-        ToggleSlider.Size = UDim2.new(0, 16, 0, 16)
-        ToggleSlider.Position = DefaultValue and UDim2.new(1, -18, 0.5, -8) or UDim2.new(0, 2, 0.5, -8)
-        ToggleSlider.ZIndex = 104
-        
-        CreateCorner(8).Parent = ToggleSlider
+        CreateGlow(ToggleButton, Theme.Purple.Glow)
         
         local isToggled = DefaultValue
         
-        ToggleButton.MouseButton1Click:Connect(function()
+        ToggleContainer.MouseButton1Click:Connect(function()
             isToggled = not isToggled
             
-            TweenService:Create(ToggleButton, Animations.Medium, {
-                BackgroundColor3 = isToggled and Theme.Purple.Main or Theme.Primary.Background
-            }):Play()
-            
-            TweenService:Create(ToggleSlider, Animations.Medium, {
-                Position = isToggled and UDim2.new(1, -18, 0.5, -8) or UDim2.new(0, 2, 0.5, -8)
+            TweenService:Create(ToggleButton, Animations.Smooth, {
+                BackgroundColor3 = isToggled and Theme.Purple.Main or Theme.Primary.Elevated,
+                Position = isToggled and UDim2.new(1, -23, 0.5, -11) or UDim2.new(0, 2, 0.5, -11)
             }):Play()
             
             ToggleCallback(isToggled)
@@ -406,11 +464,9 @@ function i2zq:CreateWindow(config)
             Toggle = ToggleButton,
             SetValue = function(value)
                 isToggled = value
-                TweenService:Create(ToggleButton, Animations.Medium, {
-                    BackgroundColor3 = isToggled and Theme.Purple.Main or Theme.Primary.Background
-                }):Play()
-                TweenService:Create(ToggleSlider, Animations.Medium, {
-                    Position = isToggled and UDim2.new(1, -18, 0.5, -8) or UDim2.new(0, 2, 0.5, -8)
+                TweenService:Create(ToggleButton, Animations.Smooth, {
+                    BackgroundColor3 = isToggled and Theme.Purple.Main or Theme.Primary.Elevated,
+                    Position = isToggled and UDim2.new(1, -23, 0.5, -11) or UDim2.new(0, 2, 0.5, -11)
                 }):Play()
             end
         }
@@ -432,17 +488,17 @@ function i2zq:CreateWindow(config)
         SliderFrame.Size = UDim2.new(1, -10, 0, 60)
         SliderFrame.ZIndex = 102
         
-        CreateCorner(8).Parent = SliderFrame
-        CreateStroke(Theme.Primary.Border, 1).Parent = SliderFrame
+        CreateCorner(10).Parent = SliderFrame
+        CreateStroke(Theme.Primary.Border, 1, 0.7).Parent = SliderFrame
         
         local SliderLabel = Instance.new("TextLabel")
         SliderLabel.Parent = SliderFrame
         SliderLabel.BackgroundTransparency = 1
         SliderLabel.Size = UDim2.new(1, -20, 0, 25)
-        SliderLabel.Position = UDim2.new(0, 10, 0, 5)
+        SliderLabel.Position = UDim2.new(0, 15, 0, 5)
         SliderLabel.Text = SliderName
         SliderLabel.TextColor3 = Theme.Text.Primary
-        SliderLabel.TextScaled = true
+        SliderLabel.TextSize = 16
         SliderLabel.TextXAlignment = Enum.TextXAlignment.Left
         SliderLabel.Font = Enum.Font.Gotham
         SliderLabel.ZIndex = 103
@@ -454,7 +510,7 @@ function i2zq:CreateWindow(config)
         SliderValue.Position = UDim2.new(1, -70, 0, 5)
         SliderValue.Text = tostring(DefaultValue)
         SliderValue.TextColor3 = Theme.Purple.Light
-        SliderValue.TextScaled = true
+        SliderValue.TextSize = 16
         SliderValue.TextXAlignment = Enum.TextXAlignment.Right
         SliderValue.Font = Enum.Font.GothamBold
         SliderValue.ZIndex = 103
@@ -462,11 +518,11 @@ function i2zq:CreateWindow(config)
         local SliderTrack = Instance.new("Frame")
         SliderTrack.Parent = SliderFrame
         SliderTrack.BackgroundColor3 = Theme.Primary.Background
-        SliderTrack.Size = UDim2.new(1, -20, 0, 6)
-        SliderTrack.Position = UDim2.new(0, 10, 1, -16)
+        SliderTrack.Size = UDim2.new(1, -20, 0, 8)
+        SliderTrack.Position = UDim2.new(0, 10, 1, -25)
         SliderTrack.ZIndex = 103
         
-        CreateCorner(3).Parent = SliderTrack
+        CreateCorner(4).Parent = SliderTrack
         
         local SliderFill = Instance.new("Frame")
         SliderFill.Parent = SliderTrack
@@ -475,16 +531,16 @@ function i2zq:CreateWindow(config)
         SliderFill.Position = UDim2.new(0, 0, 0, 0)
         SliderFill.ZIndex = 104
         
-        CreateCorner(3).Parent = SliderFill
+        CreateCorner(4).Parent = SliderFill
         
         local SliderKnob = Instance.new("Frame")
         SliderKnob.Parent = SliderTrack
         SliderKnob.BackgroundColor3 = Theme.Text.Primary
-        SliderKnob.Size = UDim2.new(0, 14, 0, 14)
-        SliderKnob.Position = UDim2.new((DefaultValue - MinValue) / (MaxValue - MinValue), -7, 0.5, -7)
+        SliderKnob.Size = UDim2.new(0, 16, 0, 16)
+        SliderKnob.Position = UDim2.new((DefaultValue - MinValue) / (MaxValue - MinValue), -8, 0.5, -8)
         SliderKnob.ZIndex = 105
         
-        CreateCorner(7).Parent = SliderKnob
+        CreateCorner(8).Parent = SliderKnob
         CreateGlow(SliderKnob, Theme.Purple.Glow)
         
         local currentValue = DefaultValue
@@ -501,7 +557,7 @@ function i2zq:CreateWindow(config)
             }):Play()
             
             TweenService:Create(SliderKnob, Animations.Fast, {
-                Position = UDim2.new(pos, -7, 0.5, -7)
+                Position = UDim2.new(pos, -8, 0.5, -8)
             }):Play()
             
             SliderCallback(currentValue)
@@ -534,7 +590,7 @@ function i2zq:CreateWindow(config)
                 local pos = (currentValue - MinValue) / (MaxValue - MinValue)
                 SliderValue.Text = tostring(currentValue)
                 SliderFill.Size = UDim2.new(pos, 0, 1, 0)
-                SliderKnob.Position = UDim2.new(pos, -7, 0.5, -7)
+                SliderKnob.Position = UDim2.new(pos, -8, 0.5, -8)
             end,
             GetValue = function()
                 return currentValue
@@ -556,17 +612,17 @@ function i2zq:CreateWindow(config)
         TextBoxFrame.Size = UDim2.new(1, -10, 0, 60)
         TextBoxFrame.ZIndex = 102
         
-        CreateCorner(8).Parent = TextBoxFrame
-        CreateStroke(Theme.Primary.Border, 1).Parent = TextBoxFrame
+        CreateCorner(10).Parent = TextBoxFrame
+        CreateStroke(Theme.Primary.Border, 1, 0.7).Parent = TextBoxFrame
         
         local TextBoxLabel = Instance.new("TextLabel")
         TextBoxLabel.Parent = TextBoxFrame
         TextBoxLabel.BackgroundTransparency = 1
         TextBoxLabel.Size = UDim2.new(1, -20, 0, 25)
-        TextBoxLabel.Position = UDim2.new(0, 10, 0, 5)
+        TextBoxLabel.Position = UDim2.new(0, 15, 0, 5)
         TextBoxLabel.Text = TextBoxName
         TextBoxLabel.TextColor3 = Theme.Text.Primary
-        TextBoxLabel.TextScaled = true
+        TextBoxLabel.TextSize = 16
         TextBoxLabel.TextXAlignment = Enum.TextXAlignment.Left
         TextBoxLabel.Font = Enum.Font.Gotham
         TextBoxLabel.ZIndex = 103
@@ -575,19 +631,19 @@ function i2zq:CreateWindow(config)
         TextBox.Parent = TextBoxFrame
         TextBox.BackgroundColor3 = Theme.Primary.Background
         TextBox.BackgroundTransparency = Theme.Transparency.Light
-        TextBox.Size = UDim2.new(1, -20, 0, 25)
-        TextBox.Position = UDim2.new(0, 10, 1, -30)
+        TextBox.Size = UDim2.new(1, -20, 0, 30)
+        TextBox.Position = UDim2.new(0, 10, 1, -35)
         TextBox.PlaceholderText = PlaceholderText
         TextBox.PlaceholderColor3 = Theme.Text.Muted
         TextBox.Text = ""
         TextBox.TextColor3 = Theme.Text.Primary
-        TextBox.TextScaled = true
+        TextBox.TextSize = 14
         TextBox.TextXAlignment = Enum.TextXAlignment.Left
         TextBox.Font = Enum.Font.Gotham
         TextBox.ZIndex = 103
         
         CreateCorner(6).Parent = TextBox
-        CreateStroke(Theme.Purple.Main, 1).Parent = TextBox
+        CreateStroke(Theme.Purple.Main, 1, 0.7).Parent = TextBox
         
         TextBox.FocusLost:Connect(function(enterPressed)
             if enterPressed then
@@ -603,19 +659,17 @@ function i2zq:CreateWindow(config)
     function Window:AddLabel(config)
         config = config or {}
         local LabelText = config.Text or "Label"
+        local IsTitle = config.IsTitle or false
         
         local Label = Instance.new("TextLabel")
         Label.Parent = self.ContentFrame
-        Label.BackgroundColor3 = Theme.Primary.Surface
-        Label.BackgroundTransparency = Theme.Transparency.Medium
+        Label.BackgroundTransparency = 1
         Label.Size = UDim2.new(1, -10, 0, 30)
         Label.Text = LabelText
-        Label.TextColor3 = Theme.Text.Secondary
-        Label.TextScaled = true
-        Label.Font = Enum.Font.Gotham
+        Label.TextColor3 = IsTitle and Theme.Purple.Light or Theme.Text.Secondary
+        Label.TextSize = IsTitle and 18 or 14
+        Label.Font = IsTitle and Enum.Font.GothamBold or Enum.Font.Gotham
         Label.ZIndex = 102
-        
-        CreateCorner(8).Parent = Label
         
         self.ContentFrame.CanvasSize = UDim2.new(0, 0, 0, UIListLayout.AbsoluteContentSize.Y)
         
@@ -637,8 +691,8 @@ function i2zq:CreateWindow(config)
         DropdownFrame.Size = UDim2.new(1, -10, 0, 40)
         DropdownFrame.ZIndex = 102
         
-        CreateCorner(8).Parent = DropdownFrame
-        CreateStroke(Theme.Primary.Border, 1).Parent = DropdownFrame
+        CreateCorner(10).Parent = DropdownFrame
+        CreateStroke(Theme.Primary.Border, 1, 0.7).Parent = DropdownFrame
         
         local DropdownButton = Instance.new("TextButton")
         DropdownButton.Parent = DropdownFrame
@@ -646,19 +700,20 @@ function i2zq:CreateWindow(config)
         DropdownButton.Size = UDim2.new(1, 0, 1, 0)
         DropdownButton.Text = DefaultOption
         DropdownButton.TextColor3 = Theme.Text.Primary
-        DropdownButton.TextScaled = true
+        DropdownButton.TextSize = 16
         DropdownButton.Font = Enum.Font.Gotham
         DropdownButton.ZIndex = 103
+        DropdownButton.AutoButtonColor = false
         
-        local DropdownArrow = Instance.new("TextLabel")
+        local DropdownArrow = Instance.new("ImageLabel")
         DropdownArrow.Parent = DropdownFrame
         DropdownArrow.BackgroundTransparency = 1
-        DropdownArrow.Size = UDim2.new(0, 20, 1, 0)
-        DropdownArrow.Position = UDim2.new(1, -25, 0, 0)
-        DropdownArrow.Text = "▼"
-        DropdownArrow.TextColor3 = Theme.Purple.Main
-        DropdownArrow.TextScaled = true
-        DropdownArrow.Font = Enum.Font.Gotham
+        DropdownArrow.Size = UDim2.new(0, 20, 0, 20)
+        DropdownArrow.Position = UDim2.new(1, -30, 0.5, -10)
+        DropdownArrow.Image = "rbxassetid://3926305904"
+        DropdownArrow.ImageRectOffset = Vector2.new(324, 364)
+        DropdownArrow.ImageRectSize = Vector2.new(24, 24)
+        DropdownArrow.ImageColor3 = Theme.Purple.Main
         DropdownArrow.ZIndex = 103
         
         local DropdownList = Instance.new("Frame")
@@ -672,7 +727,7 @@ function i2zq:CreateWindow(config)
         DropdownList.Visible = false
         
         CreateCorner(8).Parent = DropdownList
-        CreateStroke(Theme.Purple.Main, 1).Parent = DropdownList
+        CreateStroke(Theme.Purple.Main, 1, 0.7).Parent = DropdownList
         CreateShadow(DropdownList, 0.4)
         
         local DropdownListLayout = Instance.new("UIListLayout")
@@ -690,14 +745,15 @@ function i2zq:CreateWindow(config)
             OptionButton.Size = UDim2.new(1, 0, 0, 30)
             OptionButton.Text = option
             OptionButton.TextColor3 = Theme.Text.Primary
-            OptionButton.TextScaled = true
+            OptionButton.TextSize = 14
             OptionButton.Font = Enum.Font.Gotham
             OptionButton.ZIndex = 111
+            OptionButton.AutoButtonColor = false
             
             if i == 1 then
-                CreateCorner(8).Parent = OptionButton
+                CreateCorner(8, 8, 0, 0).Parent = OptionButton
             elseif i == #DropdownOptions then
-                CreateCorner(8).Parent = OptionButton
+                CreateCorner(0, 0, 8, 8).Parent = OptionButton
             end
             
             OptionButton.MouseEnter:Connect(function()
@@ -787,8 +843,8 @@ function i2zq:CreateWindow(config)
         ColorPickerFrame.Size = UDim2.new(1, -10, 0, 40)
         ColorPickerFrame.ZIndex = 102
         
-        CreateCorner(8).Parent = ColorPickerFrame
-        CreateStroke(Theme.Primary.Border, 1).Parent = ColorPickerFrame
+        CreateCorner(10).Parent = ColorPickerFrame
+        CreateStroke(Theme.Primary.Border, 1, 0.7).Parent = ColorPickerFrame
         
         local ColorPickerLabel = Instance.new("TextLabel")
         ColorPickerLabel.Parent = ColorPickerFrame
@@ -797,7 +853,7 @@ function i2zq:CreateWindow(config)
         ColorPickerLabel.Position = UDim2.new(0, 15, 0, 0)
         ColorPickerLabel.Text = ColorPickerName
         ColorPickerLabel.TextColor3 = Theme.Text.Primary
-        ColorPickerLabel.TextScaled = true
+        ColorPickerLabel.TextSize = 16
         ColorPickerLabel.TextXAlignment = Enum.TextXAlignment.Left
         ColorPickerLabel.Font = Enum.Font.Gotham
         ColorPickerLabel.ZIndex = 103
@@ -810,7 +866,7 @@ function i2zq:CreateWindow(config)
         ColorDisplay.ZIndex = 103
         
         CreateCorner(6).Parent = ColorDisplay
-        CreateStroke(Theme.Text.Primary, 2).Parent = ColorDisplay
+        CreateStroke(Theme.Text.Primary, 2, 0.5).Parent = ColorDisplay
         
         local ColorButton = Instance.new("TextButton")
         ColorButton.Parent = ColorDisplay
@@ -871,35 +927,37 @@ function i2zq:CreateWindow(config)
         local SectionFrame = Instance.new("Frame")
         SectionFrame.Name = SectionName .. "Section"
         SectionFrame.Parent = self.ContentFrame
-        SectionFrame.BackgroundColor3 = Theme.Primary.Elevated
-        SectionFrame.BackgroundTransparency = Theme.Transparency.Medium
-        SectionFrame.Size = UDim2.new(1, -10, 0, 30)
+        SectionFrame.BackgroundTransparency = 1
+        SectionFrame.Size = UDim2.new(1, -10, 0, 40)
         SectionFrame.ZIndex = 102
         
-        CreateCorner(8).Parent = SectionFrame
-        CreateStroke(Theme.Purple.Main, 1).Parent = SectionFrame
+        local SectionDivider = Instance.new("Frame")
+        SectionDivider.Parent = SectionFrame
+        SectionDivider.BackgroundColor3 = Theme.Purple.Main
+        SectionDivider.BackgroundTransparency = 0.7
+        SectionDivider.Size = UDim2.new(1, 0, 0, 1)
+        SectionDivider.Position = UDim2.new(0, 0, 0.5, 0)
+        SectionDivider.ZIndex = 103
         
         local SectionLabel = Instance.new("TextLabel")
         SectionLabel.Parent = SectionFrame
-        SectionLabel.BackgroundTransparency = 1
-        SectionLabel.Size = UDim2.new(1, -20, 1, 0)
-        SectionLabel.Position = UDim2.new(0, 10, 0, 0)
-        SectionLabel.Text = SectionName
+        SectionLabel.BackgroundColor3 = Theme.Primary.Elevated
+        SectionLabel.BackgroundTransparency = 0.2
+        SectionLabel.Size = UDim2.new(0, 0, 0, 24)
+        SectionLabel.Position = UDim2.new(0.5, -50, 0.5, -12)
+        SectionLabel.Text = " " .. SectionName .. " "
         SectionLabel.TextColor3 = Theme.Purple.Light
-        SectionLabel.TextScaled = true
-        SectionLabel.TextXAlignment = Enum.TextXAlignment.Left
+        SectionLabel.TextSize = 14
         SectionLabel.Font = Enum.Font.GothamBold
-        SectionLabel.ZIndex = 103
+        SectionLabel.ZIndex = 104
+        CreateCorner(4).Parent = SectionLabel
         
-        -- Section gradient
-        local sectionGradient = CreateGradient(
-            ColorSequence.new({
-                ColorSequenceKeypoint.new(0, Theme.Purple.Dark),
-                ColorSequenceKeypoint.new(1, Theme.Primary.Elevated)
-            }),
-            90
-        )
-        sectionGradient.Parent = SectionFrame
+        -- Auto-size label
+        local textSize = TextService:GetTextSize(SectionLabel.Text, SectionLabel.TextSize, SectionLabel.Font, Vector2.new(1000, 24))
+        SectionLabel.Size = UDim2.new(0, textSize.X + 20, 0, 24)
+        SectionLabel.Position = UDim2.new(0.5, -textSize.X/2 - 10, 0.5, -12)
+        
+        CreateStroke(Theme.Purple.Main, 1, 0.6).Parent = SectionLabel
         
         self.ContentFrame.CanvasSize = UDim2.new(0, 0, 0, UIListLayout.AbsoluteContentSize.Y)
         
@@ -920,8 +978,8 @@ function i2zq:CreateWindow(config)
         KeybindFrame.Size = UDim2.new(1, -10, 0, 40)
         KeybindFrame.ZIndex = 102
         
-        CreateCorner(8).Parent = KeybindFrame
-        CreateStroke(Theme.Primary.Border, 1).Parent = KeybindFrame
+        CreateCorner(10).Parent = KeybindFrame
+        CreateStroke(Theme.Primary.Border, 1, 0.7).Parent = KeybindFrame
         
         local KeybindLabel = Instance.new("TextLabel")
         KeybindLabel.Parent = KeybindFrame
@@ -930,7 +988,7 @@ function i2zq:CreateWindow(config)
         KeybindLabel.Position = UDim2.new(0, 15, 0, 0)
         KeybindLabel.Text = KeybindName
         KeybindLabel.TextColor3 = Theme.Text.Primary
-        KeybindLabel.TextScaled = true
+        KeybindLabel.TextSize = 16
         KeybindLabel.TextXAlignment = Enum.TextXAlignment.Left
         KeybindLabel.Font = Enum.Font.Gotham
         KeybindLabel.ZIndex = 103
@@ -943,12 +1001,12 @@ function i2zq:CreateWindow(config)
         KeybindButton.Position = UDim2.new(1, -70, 0.5, -12.5)
         KeybindButton.Text = DefaultKey.Name
         KeybindButton.TextColor3 = Theme.Purple.Light
-        KeybindButton.TextScaled = true
+        KeybindButton.TextSize = 14
         KeybindButton.Font = Enum.Font.GothamBold
         KeybindButton.ZIndex = 103
         
         CreateCorner(6).Parent = KeybindButton
-        CreateStroke(Theme.Purple.Main, 1).Parent = KeybindButton
+        CreateStroke(Theme.Purple.Main, 1, 0.7).Parent = KeybindButton
         
         local currentKey = DefaultKey
         local isBinding = false
@@ -1006,7 +1064,7 @@ function i2zq:CreateWindow(config)
     return Window
 end
 
--- Notification System
+-- Enhanced Notification System
 function i2zq:CreateNotification(config)
     config = config or {}
     local Title = config.Title or "Notification"
@@ -1022,15 +1080,18 @@ function i2zq:CreateNotification(config)
     local NotificationFrame = Instance.new("Frame")
     NotificationFrame.Parent = NotificationGui
     NotificationFrame.BackgroundColor3 = Theme.Primary.Elevated
-    NotificationFrame.BackgroundTransparency = Theme.Transparency.Light
-    NotificationFrame.Size = UDim2.new(0, 300, 0, 80)
+    NotificationFrame.BackgroundTransparency = 0.2
+    NotificationFrame.Size = UDim2.new(0, 320, 0, 90)
     NotificationFrame.Position = UDim2.new(1, 20, 0, 50)
     NotificationFrame.ZIndex = 200
     
-    CreateCorner(10).Parent = NotificationFrame
-    CreateStroke(Theme.Purple.Main, 2).Parent = NotificationFrame
-    CreateShadow(NotificationFrame, 0.6)
-    CreateGlow(NotificationFrame, Theme.Purple.Glow)
+    CreateCorner(12).Parent = NotificationFrame
+    CreateStroke(Theme.Purple.Main, 1.5, 0.6).Parent = NotificationFrame
+    CreateShadow(NotificationFrame, 0.5, 20)
+    
+    -- Glass effect
+    local glass = CreateGlassEffect(NotificationFrame)
+    glass.Parent = NotificationFrame
     
     local TypeColors = {
         info = Theme.Purple.Main,
@@ -1051,11 +1112,11 @@ function i2zq:CreateNotification(config)
     local TitleLabel = Instance.new("TextLabel")
     TitleLabel.Parent = NotificationFrame
     TitleLabel.BackgroundTransparency = 1
-    TitleLabel.Size = UDim2.new(1, -50, 0, 25)
+    TitleLabel.Size = UDim2.new(1, -40, 0, 25)
     TitleLabel.Position = UDim2.new(0, 15, 0, 10)
     TitleLabel.Text = Title
     TitleLabel.TextColor3 = Theme.Text.Primary
-    TitleLabel.TextScaled = true
+    TitleLabel.TextSize = 16
     TitleLabel.TextXAlignment = Enum.TextXAlignment.Left
     TitleLabel.Font = Enum.Font.GothamBold
     TitleLabel.ZIndex = 201
@@ -1063,30 +1124,30 @@ function i2zq:CreateNotification(config)
     local DescriptionLabel = Instance.new("TextLabel")
     DescriptionLabel.Parent = NotificationFrame
     DescriptionLabel.BackgroundTransparency = 1
-    DescriptionLabel.Size = UDim2.new(1, -50, 0, 35)
+    DescriptionLabel.Size = UDim2.new(1, -40, 0, 40)
     DescriptionLabel.Position = UDim2.new(0, 15, 0, 35)
     DescriptionLabel.Text = Description
     DescriptionLabel.TextColor3 = Theme.Text.Secondary
-    DescriptionLabel.TextScaled = true
+    DescriptionLabel.TextSize = 14
     DescriptionLabel.TextXAlignment = Enum.TextXAlignment.Left
     DescriptionLabel.TextWrapped = true
     DescriptionLabel.Font = Enum.Font.Gotham
     DescriptionLabel.ZIndex = 201
     
-    local CloseButton = Instance.new("TextButton")
+    local CloseButton = Instance.new("ImageButton")
     CloseButton.Parent = NotificationFrame
     CloseButton.BackgroundTransparency = 1
     CloseButton.Size = UDim2.new(0, 20, 0, 20)
-    CloseButton.Position = UDim2.new(1, -25, 0, 5)
-    CloseButton.Text = "×"
-    CloseButton.TextColor3 = Theme.Text.Muted
-    CloseButton.TextScaled = true
-    CloseButton.Font = Enum.Font.GothamBold
+    CloseButton.Position = UDim2.new(1, -30, 0, 10)
+    CloseButton.Image = "rbxassetid://3926305904"
+    CloseButton.ImageRectOffset = Vector2.new(284, 4)
+    CloseButton.ImageRectSize = Vector2.new(24, 24)
+    CloseButton.ImageColor3 = Theme.Text.Muted
     CloseButton.ZIndex = 201
     
     -- Slide in animation
     TweenService:Create(NotificationFrame, Animations.Bounce, {
-        Position = UDim2.new(1, -320, 0, 50)
+        Position = UDim2.new(1, -340, 0, 50)
     }):Play()
     
     -- Auto close
@@ -1119,9 +1180,13 @@ function i2zq:CreateNotification(config)
             end
         end)
     end
+    
+    return {
+        Close = closeNotification
+    }
 end
 
--- Loading Screen
+-- Modern Loading Screen
 function i2zq:CreateLoadingScreen(config)
     config = config or {}
     local Title = config.Title or "Loading..."
@@ -1144,14 +1209,17 @@ function i2zq:CreateLoadingScreen(config)
     LoadingContent.Parent = LoadingFrame
     LoadingContent.BackgroundColor3 = Theme.Primary.Elevated
     LoadingContent.BackgroundTransparency = Theme.Transparency.Light
-    LoadingContent.Size = UDim2.new(0, 400, 0, 200)
-    LoadingContent.Position = UDim2.new(0.5, -200, 0.5, -100)
+    LoadingContent.Size = UDim2.new(0, 400, 0, 220)
+    LoadingContent.Position = UDim2.new(0.5, -200, 0.5, -110)
     LoadingContent.ZIndex = 251
     
-    CreateCorner(12).Parent = LoadingContent
-    CreateStroke(Theme.Purple.Main, 2).Parent = LoadingContent
-    CreateShadow(LoadingContent, 0.8)
-    CreateGlow(LoadingContent, Theme.Purple.Glow)
+    CreateCorner(14).Parent = LoadingContent
+    CreateStroke(Theme.Purple.Main, 2, 0.6).Parent = LoadingContent
+    CreateShadow(LoadingContent, 0.8, 30)
+    
+    -- Glass effect
+    local glass = CreateGlassEffect(LoadingContent)
+    glass.Parent = LoadingContent
     
     local LoadingTitle = Instance.new("TextLabel")
     LoadingTitle.Parent = LoadingContent
@@ -1160,7 +1228,7 @@ function i2zq:CreateLoadingScreen(config)
     LoadingTitle.Position = UDim2.new(0, 20, 0, 20)
     LoadingTitle.Text = Title
     LoadingTitle.TextColor3 = Theme.Text.Primary
-    LoadingTitle.TextScaled = true
+    LoadingTitle.TextSize = 22
     LoadingTitle.Font = Enum.Font.GothamBold
     LoadingTitle.ZIndex = 252
     
@@ -1171,7 +1239,7 @@ function i2zq:CreateLoadingScreen(config)
     LoadingDescription.Position = UDim2.new(0, 20, 0, 70)
     LoadingDescription.Text = Description
     LoadingDescription.TextColor3 = Theme.Text.Secondary
-    LoadingDescription.TextScaled = true
+    LoadingDescription.TextSize = 16
     LoadingDescription.Font = Enum.Font.Gotham
     LoadingDescription.ZIndex = 252
     
@@ -1179,11 +1247,11 @@ function i2zq:CreateLoadingScreen(config)
     local LoadingBar = Instance.new("Frame")
     LoadingBar.Parent = LoadingContent
     LoadingBar.BackgroundColor3 = Theme.Primary.Background
-    LoadingBar.Size = UDim2.new(1, -40, 0, 6)
+    LoadingBar.Size = UDim2.new(1, -40, 0, 8)
     LoadingBar.Position = UDim2.new(0, 20, 0, 120)
     LoadingBar.ZIndex = 252
     
-    CreateCorner(3).Parent = LoadingBar
+    CreateCorner(4).Parent = LoadingBar
     
     local LoadingProgress = Instance.new("Frame")
     LoadingProgress.Parent = LoadingBar
@@ -1192,14 +1260,14 @@ function i2zq:CreateLoadingScreen(config)
     LoadingProgress.Position = UDim2.new(0, 0, 0, 0)
     LoadingProgress.ZIndex = 253
     
-    CreateCorner(3).Parent = LoadingProgress
+    CreateCorner(4).Parent = LoadingProgress
     
     -- Spinning loader
     local Spinner = Instance.new("Frame")
     Spinner.Parent = LoadingContent
     Spinner.BackgroundTransparency = 1
-    Spinner.Size = UDim2.new(0, 30, 0, 30)
-    Spinner.Position = UDim2.new(0.5, -15, 0, 150)
+    Spinner.Size = UDim2.new(0, 40, 0, 40)
+    Spinner.Position = UDim2.new(0.5, -20, 0, 150)
     Spinner.ZIndex = 252
     
     local SpinnerRing = Instance.new("Frame")
@@ -1208,11 +1276,11 @@ function i2zq:CreateLoadingScreen(config)
     SpinnerRing.Size = UDim2.new(1, 0, 1, 0)
     SpinnerRing.ZIndex = 253
     
-    CreateStroke(Theme.Purple.Main, 3).Parent = SpinnerRing
-    CreateCorner(15).Parent = SpinnerRing
+    CreateStroke(Theme.Purple.Main, 4, 0.5).Parent = SpinnerRing
+    CreateCorner(20).Parent = SpinnerRing
     
     -- Spin animation
-    local spinTween = TweenService:Create(SpinnerRing, TweenInfo.new(1, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut, -1), {
+    local spinTween = TweenService:Create(SpinnerRing, TweenInfo.new(1.5, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut, -1), {
         Rotation = 360
     })
     spinTween:Play()
@@ -1241,24 +1309,23 @@ function i2zq:CreateLoadingScreen(config)
     
     function LoadingScreen:Close()
         spinTween:Cancel()
-        TweenService:Create(LoadingContent, Animations.Medium, {
+        TweenService:Create(LoadingContent, Animations.Elastic, {
             Size = UDim2.new(0, 0, 0, 0),
             BackgroundTransparency = 1
         }):Play()
         
-        TweenService:Create(LoadingFrame, Animations.Medium, {
+        TweenService:Create(LoadingFrame, Animations.Elastic, {
             BackgroundTransparency = 1
         }):Play()
         
-        wait(0.3)
+        wait(0.4)
         self.Gui:Destroy()
     end
     
     return LoadingScreen
 end
 
-
 -- Initialize Library
-print("🚀 i2zq Library v1.0 Loaded Successfully!")
+print("🚀 i2zq Library v2.0 Loaded Successfully!")
 
 return i2zq
