@@ -1374,9 +1374,9 @@ function library:CreateMain(title, description, keycode)
     end
     function library2:CreateSettings()
         local settings = library2:CreateTab("Settings")
-        local hidegui = settings:CreateBind("HideGUI", Enum.KeyCode.RightControl, function(value)
-            library["Bind"] = value
-        end)
+        --local hidegui = settings:CreateBind("HideGUI", Enum.KeyCode.RightControl, function(value)
+        --    library["Bind"] = value
+        --end)
         hidegui.Object.Instance.Icon:Destroy()
         local Icon = Instance.new("ImageLabel")
         Icon.Name = "Icon"
