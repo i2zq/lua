@@ -993,6 +993,105 @@ function library:CreateMain(title, description, keycode)
             return library4
         end
 
+		function library3:CreateInput(text, placeholder, callback)
+		    local library4 = {}
+		    library4["Text"] = ""
+		
+		    local Input = Instance.new("TextLabel")
+		    local UICorner = Instance.new("UICorner")
+		    local Icon = Instance.new("ImageLabel")
+		    local Title = Instance.new("TextLabel")
+		    local InputField = Instance.new("TextBox")
+		    local UICorner_2 = Instance.new("UICorner")
+		
+		    Input.Name = text.."Input"
+		    Input.Parent = Tab
+		    Input.BackgroundColor3 = theme.LightContrast
+		    Input.BackgroundTransparency = 0
+		    Input.Position = UDim2.new(0, 0, 0.326860845, 0)
+		    Input.Size = UDim2.new(0, 375, 0, 50)
+		    Input.Font = Enum.Font.SourceSans
+		    Input.Text = ""
+		    Input.TextColor3 = Color3.fromRGB(0, 0, 0)
+		    Input.TextSize = 14.000
+		
+		    UICorner.CornerRadius = UDim.new(0, 6)
+		    UICorner.Parent = Input
+		
+		    Icon.Name = "Icon"
+		    Icon.Parent = Input
+		    Icon.AnchorPoint = Vector2.new(0, 0.5)
+		    Icon.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+		    Icon.BackgroundTransparency = 1.000
+		    Icon.ClipsDescendants = true
+		    Icon.Position = UDim2.new(0.032333333, 0, 0.5, 0)
+		    Icon.Size = UDim2.new(0, 25, 0, 24)
+		    Icon.Image = "rbxassetid://3926305904"
+		    Icon.ImageRectOffset = Vector2.new(244, 44)
+		    Icon.ImageRectSize = Vector2.new(36, 36)
+		    Icon.ScaleType = Enum.ScaleType.Crop
+		    Icon.SliceScale = 0.500
+		    Icon.ImageColor3 = theme.TextColor
+		
+		    Title.Name = "Title"
+		    Title.Parent = Input
+		    Title.AnchorPoint = Vector2.new(0, 0.5)
+		    Title.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+		    Title.BackgroundTransparency = 1.000
+		    Title.Position = UDim2.new(0.141000003, 0, 0.5, 0)
+		    Title.Size = UDim2.new(0, 101, 0, 21)
+		    Title.Font = Enum.Font.GothamSemibold
+		    Title.Text = text
+		    Title.TextColor3 = theme.TextColor
+		    Title.TextSize = 14.000
+		    Title.TextXAlignment = Enum.TextXAlignment.Left
+		
+		    InputField.Name = "InputField"
+		    InputField.Parent = Input
+		    InputField.AnchorPoint = Vector2.new(0, 0.5)
+		    InputField.BackgroundColor3 = theme.DarkContrast
+		    InputField.BorderSizePixel = 0
+		    InputField.Position = UDim2.new(0.43233332, 0, 0.5, 0)
+		    InputField.Size = UDim2.new(0, 201, 0, 20)
+		    InputField.Font = Enum.Font.Gotham
+		    InputField.PlaceholderColor3 = theme.DarkTextColor
+		    InputField.PlaceholderText = placeholder or "Enter value..."
+		    InputField.Text = ""
+		    InputField.TextColor3 = theme.DescriptionTextColor
+		    InputField.TextSize = 14.000
+		    InputField.TextWrapped = true
+		
+		    InputField.FocusLost:Connect(function(enterPressed)
+		        if enterPressed then
+		            spawn(function() 
+		                pcall(callback, InputField.Text) 
+		            end)
+		            library4["Text"] = InputField.Text
+		        end
+		    end)
+		
+		    UICorner_2.CornerRadius = UDim.new(0, 6)
+		    UICorner_2.Parent = InputField
+		
+		    function library4:SetValue(value)
+		        InputField.Text = tostring(value)
+		        library4["Text"] = tostring(value)
+		    end
+		
+		    function library4:GetValue()
+		        return library4["Text"]
+		    end
+		
+		    local obj = {
+		        ["Type"] = "Input",
+		        ["Instance"] = Input,
+		        ["Api"] = library4
+		    }
+		    table.insert(library2["Tabs"][name], obj)
+		    library4["Object"] = obj
+		    return library4
+		end
+
         function library3:CreateTextList(text, callback)
             local library4 = {}
             library4["List"] = {}
