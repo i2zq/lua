@@ -70,6 +70,16 @@ local function error(message)
     old_err("[EngoUILib] "..tostring(message))
 end
 
+local function getTextFromKeyCode(keycode)
+    local success, result = pcall(function()
+        return keycode.Name
+    end)
+    if success then
+        return result, true
+    else
+        return "None", false
+    end
+end
 
 local function RelativeXY(GuiObject, location)
 	local x, y = location.X - GuiObject.AbsolutePosition.X, location.Y - GuiObject.AbsolutePosition.Y
@@ -285,6 +295,51 @@ function library:CreateMain(title, description, keycode)
         TabButton.MouseButton1Click:Connect(function()
             library2:OpenTab(name)
         end)
+
+        function library3:CreateSection(text)
+            local Section = Instance.new("Frame")
+            local UICorner = Instance.new("UICorner")
+            local Title = Instance.new("TextLabel")
+            local Line = Instance.new("Frame")
+
+            Section.Name = text.."Section"
+            Section.Parent = Tab
+            Section.BackgroundColor3 = theme.LightContrast
+            Section.BackgroundTransparency = 0
+            Section.Size = UDim2.new(0, 375, 0, 50)
+
+            UICorner.CornerRadius = UDim.new(0, 6)
+            UICorner.Parent = Section
+
+            Title.Name = "Title"
+            Title.Parent = Section
+            Title.AnchorPoint = Vector2.new(0, 0.5)
+            Title.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+            Title.BackgroundTransparency = 1.000
+            Title.Position = UDim2.new(0.0419999994, 0, 0.5, 0)
+            Title.Size = UDim2.new(0, 363, 0, 21)
+            Title.Font = Enum.Font.GothamSemibold
+            Title.Text = text
+            Title.TextColor3 = theme.TextColor
+            Title.TextSize = 14.000
+            Title.TextXAlignment = Enum.TextXAlignment.Left
+
+            Line.Name = "Line"
+            Line.Parent = Section
+            Line.AnchorPoint = Vector2.new(0, 0.5)
+            Line.BackgroundColor3 = theme.DarkContrast
+            Line.BorderSizePixel = 0
+            Line.Position = UDim2.new(0.0419999994, 0, 0.899999976, 0)
+            Line.Size = UDim2.new(0, 363, 0, 1)
+
+            local obj = {
+                ["Type"] = "Section",
+                ["Instance"] = Section,
+                ["Api"] = nil
+            }
+            table.insert(library2["Tabs"][name], obj)
+            return obj
+        end
 
         function library3:CreateButton(text, callback)
             callback = callback or function() end
@@ -1476,20 +1531,29 @@ function library:CreateMain(title, description, keycode)
         local hidegui = settings:CreateBind("HideGUI", Enum.KeyCode.RightControl, function(value)
             library["Bind"] = value
         end)
-        hidegui.Object.Instance.Icon:Destroy()
-        local Icon = Instance.new("ImageLabel")
-        Icon.Name = "Icon"
-        Icon.Parent = hidegui.Object.Instance
-        Icon.AnchorPoint = Vector2.new(0, 0.5)
-        Icon.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-        Icon.BackgroundTransparency = 1.000
-        Icon.ClipsDescendants = true
-        Icon.Position = UDim2.new(0.032333333, 0, 0.5, 0)
-        Icon.Size = UDim2.new(0, 25, 0, 24)
-        Icon.Image = "rbxassetid://3926307971"
-        Icon.ImageRectOffset = Vector2.new(4, 484)
-        Icon.ImageRectSize = Vector2.new(36, 36)
-        Icon.SliceScale = 0.500
+        
+        -- إصلاح مشكلة الـ Bind في Settings Tab
+        if hidegui.Object and hidegui.Object.Instance then
+            local bindInstance = hidegui.Object.Instance
+            if bindInstance:FindFirstChild("Icon") then
+                bindInstance.Icon:Destroy()
+            end
+            
+            local Icon = Instance.new("ImageLabel")
+            Icon.Name = "Icon"
+            Icon.Parent = bindInstance
+            Icon.AnchorPoint = Vector2.new(0, 0.5)
+            Icon.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+            Icon.BackgroundTransparency = 1.000
+            Icon.ClipsDescendants = true
+            Icon.Position = UDim2.new(0.032333333, 0, 0.5, 0)
+            Icon.Size = UDim2.new(0, 25, 0, 24)
+            Icon.Image = "rbxassetid://3926307971"
+            Icon.ImageRectOffset = Vector2.new(4, 484)
+            Icon.ImageRectSize = Vector2.new(36, 36)
+            Icon.SliceScale = 0.500
+            Icon.ImageColor3 = theme.TextColor
+        end
 
         local uninject = settings:CreateButton("RemoveGUI", function() 
             if getgenv().EngoUILib then 
