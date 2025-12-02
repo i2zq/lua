@@ -983,18 +983,21 @@ function library:CreateMain(title, description, keycode)
                     -- إذا وجدنا الـDropdown، نرتب الخيارات بعده مباشرة
                     if dropdownIndex then
                         local currentLayoutOrder = dropdownIndex + 1
-        
+
                         for _, child in ipairs(children) do
-                            if child:IsA("TextButton") and child.Name:find("Option") then
-                                child.LayoutOrder = currentLayoutOrder
-                                currentLayoutOrder = currentLayoutOrder + 1
-                            elseif child ~= Dropdown and not child:IsA("TextButton") then
-                                child.LayoutOrder = currentLayoutOrder
-                                currentLayoutOrder = currentLayoutOrder + 1
+                            if child:IsA("GuiObject") then
+                                if child:IsA("TextButton") and child.Name:find("Option") then
+                                    child.LayoutOrder = currentLayoutOrder
+                                    currentLayoutOrder = currentLayoutOrder + 1
+                                elseif child ~= Dropdown then
+                                    child.LayoutOrder = currentLayoutOrder
+                                    currentLayoutOrder = currentLayoutOrder + 1
+                                end
                             end
                         end
+
                     end
-                end
+
     
                 -- تأخير إعادة الترتيب قليلاً للسماح بتحميل العناصر
                 spawn(function()
