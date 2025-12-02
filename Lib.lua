@@ -943,7 +943,6 @@ function library:CreateMain(title, description, keycode)
                         break
                     end
                 end
-                
                 library4["Options"][tostring(text)..ending] = {
                     ["Value"] = text,
                     ["Instance"] = Option
@@ -960,45 +959,6 @@ function library:CreateMain(title, description, keycode)
                 Option.TextColor3 = Color3.fromRGB(0, 0, 0)
                 Option.TextSize = 14.000
                 Option.Visible = false
-                
-                -- === إصلاح: تعيين LayoutOrder لترتيب العناصر ===
-                Option.LayoutOrder = 999  -- قيمة عالية لتظهر في الأسفل مؤقتاً
-                
-                -- إعادة ترتيب العناصر: الخيارات ستظهر بعد الـDropdown مباشرة
-                local function ReorderElements()
-                    local children = Tab:GetChildren()
-                    local dropdownIndex = nil
-                    local optionCount = 0
-                    
-                    -- البحث عن الـDropdown والخيارات
-                    for _, child in ipairs(children) do
-                        if child == Dropdown then
-                            dropdownIndex = _
-                        elseif child:IsA("TextButton") and child.Name:find("Option") then
-                            optionCount = optionCount + 1
-                        end
-                    end
-                    
-                    -- إذا وجدنا الـDropdown، نرتب الخيارات بعده مباشرة
-                    if dropdownIndex then
-                        local currentLayoutOrder = dropdownIndex + 1
-                        for _, child in ipairs(children) do
-                            if child:IsA("TextButton") and child.Name:find("Option") then
-                                child.LayoutOrder = currentLayoutOrder
-                                currentLayoutOrder = currentLayoutOrder + 1
-                            elseif child ~= Dropdown and not child:IsA("TextButton") then
-                                child.LayoutOrder = currentLayoutOrder
-                                currentLayoutOrder = currentLayoutOrder + 1
-                            end
-                        end
-                    end
-                end
-                
-                -- تأخير إعادة الترتيب قليلاً للسماح بتحميل العناصر
-                spawn(function()
-                    wait(0.1)
-                    ReorderElements()
-                end)
 
                 UICorner_11.CornerRadius = UDim.new(0, 6)
                 UICorner_11.Parent = Option
@@ -1093,13 +1053,13 @@ function library:CreateMain(title, description, keycode)
                     Option.Parent = Tab
                     Option.BackgroundColor3 = theme.LightContrast
                     Option.BackgroundTransparency = 0
+                    Option.Position = UDim2.new(0, 0, 0.666666687, 0)
                     Option.Size = UDim2.new(0, 354, 0, 50)
                     Option.Font = Enum.Font.SourceSans
                     Option.Text = ""
                     Option.TextColor3 = Color3.fromRGB(0, 0, 0)
                     Option.TextSize = 14.000
                     Option.Visible = false
-                    Option.LayoutOrder = 999  -- قيمة مؤقتة
 
                     UICorner_11.CornerRadius = UDim.new(0, 6)
                     UICorner_11.Parent = Option
@@ -1117,32 +1077,22 @@ function library:CreateMain(title, description, keycode)
                     Title_8.TextSize = 14.000
                     Title_8.TextXAlignment = Enum.TextXAlignment.Left
                     
-                    -- إعادة ترتيب العناصر
-                    spawn(function()
-                        wait(0.1)
-                        local children = Tab:GetChildren()
-                        local dropdownIndex = nil
-                        
-                        for _, child in ipairs(children) do
-                            if child == Dropdown then
-                                dropdownIndex = _
-                                break
+                    -- إعادة ترتيب العناصر في التبويب
+                    local isFound = false
+                    for i,v in pairs(library2["Tabs"][name]) do 
+                        if type(v) == "table" then
+                            if v.Instance == Option then 
+                                isFound = true
+                            end
+                            if isFound and v.Instance ~= Option then 
+                                spawn(function()
+                                    local old = v.Instance.Parent
+                                    v.Instance.Parent = nil
+                                    v.Instance.Parent = old
+                                end)
                             end
                         end
-                        
-                        if dropdownIndex then
-                            local currentLayoutOrder = dropdownIndex + 1
-                            for _, child in ipairs(children) do
-                                if child:IsA("TextButton") and child.Name:find("Option") then
-                                    child.LayoutOrder = currentLayoutOrder
-                                    currentLayoutOrder = currentLayoutOrder + 1
-                                elseif child ~= Dropdown and not child:IsA("TextButton") then
-                                    child.LayoutOrder = currentLayoutOrder
-                                    currentLayoutOrder = currentLayoutOrder + 1
-                                end
-                            end
-                        end
-                    end)
+                    end
                 end
                 
                 -- تحديث حجم التبويب
