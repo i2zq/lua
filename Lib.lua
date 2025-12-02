@@ -948,38 +948,8 @@ function library:CreateMain(title, description, keycode)
                     ["Instance"] = Option
                 }
                 library4["Connections"] = {}
-
                 Option.Name = tostring(text)..ending
                 Option.Parent = Tab
-
-                ------------------------------------------------------------------
-                -- وضع الـOption مباشرة بعد الـDropdown
-                ------------------------------------------------------------------
-                local dropdownObject = Tab:FindFirstChild("Dropdown")
-                if dropdownObject then
-                    local children = Tab:GetChildren()
-                    local dropdownPos = 0
-
-                    for i, child in ipairs(children) do
-                        if child == dropdownObject then
-                            dropdownPos = i
-                            break
-                        end
-                    end
-
-                    if dropdownPos > 0 then
-                        Option.LayoutOrder = dropdownPos + 1
-                        for i = dropdownPos + 1, #children do
-                            if children[i] ~= Option then
-                                children[i].LayoutOrder = children[i].LayoutOrder + 1
-                            end
-                        end
-                    end
-                else
-                    Option.LayoutOrder = #Tab:GetChildren() + 1
-                end
-                ------------------------------------------------------------------
-
                 Option.BackgroundColor3 = theme.LightContrast
                 Option.BackgroundTransparency = 0
                 Option.Position = UDim2.new(0, 0, 0.666666687, 0)
@@ -1006,9 +976,24 @@ function library:CreateMain(title, description, keycode)
                 Title_8.TextSize = 14.000
                 Title_8.TextXAlignment = Enum.TextXAlignment.Left
 
+                local isFound = false
+                for i,v in pairs(library2["Tabs"][name]) do 
+                    if type(v) == "table" then
+                        if v.Instance == Option then 
+                            isFound = true
+                        end
+                        if isFound and v.Instance ~= Option then 
+                            spawn(function()
+                                local old = v.Instance.Parent
+                                v.Instance.Parent = nil
+                                v.Instance.Parent = old
+                            end)
+                        end
+                    end
+                end
+
                 return Option
             end
-
 
             function library4:CreateOptions(options)
                 for i,v in pairs(options) do 
