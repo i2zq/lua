@@ -883,6 +883,7 @@ function library:CreateMain(title, description, keycode)
             local library4 = {}
             library4["Options"] = {}
             library4["Expanded"] = false
+            library4["Connections"] = {}
 
             local Dropdown = Instance.new("TextButton")
             local UICorner_10 = Instance.new("UICorner")
@@ -999,6 +1000,108 @@ function library:CreateMain(title, description, keycode)
                     local option = library4:CreateOption(v)
                 end
             end
+            
+            -- إضافة دالة Refresh الجديدة
+            function library4:Refresh(newList)
+                -- إغلاق القائمة إذا كانت مفتوحة
+                if self.Expanded then
+                    for i,v in pairs(self.Options) do
+                        if v.Instance then
+                            v.Instance.Visible = false
+                        end
+                    end
+                    for i,v in pairs(self.Connections) do
+                        if v then
+                            v:Disconnect()
+                        end
+                    end
+                    self.Expanded = false
+                end
+
+                -- حذف الخيارات القديمة
+                for i,v in pairs(self.Options) do
+                    if v.Instance then
+                        v.Instance:Destroy()
+                    end
+                end
+                
+                -- مسح الجداول
+                self.Options = {}
+                self.Connections = {}
+                
+                -- إعادة إنشاء الخيارات الجديدة
+                for i, option in pairs(newList) do
+                    local Option = Instance.new("TextButton")
+                    local UICorner_11 = Instance.new("UICorner")
+                    local Title_8 = Instance.new("TextLabel")
+                    
+                    local ending = "Option"
+                    for j = 1,100 do
+                        if j == 1 then j = "" end
+                        if not Tab:FindFirstChild(tostring(option).."Option"..tostring(j)) then
+                            ending = "Option"..tostring(j)
+                            break
+                        end
+                    end
+                    
+                    self.Options[tostring(option)..ending] = {
+                        ["Value"] = option,
+                        ["Instance"] = Option
+                    }
+                    
+                    Option.Name = tostring(option)..ending
+                    Option.Parent = Tab
+                    Option.BackgroundColor3 = theme.LightContrast
+                    Option.BackgroundTransparency = 0
+                    Option.Position = UDim2.new(0, 0, 0.666666687, 0)
+                    Option.Size = UDim2.new(0, 354, 0, 50)
+                    Option.Font = Enum.Font.SourceSans
+                    Option.Text = ""
+                    Option.TextColor3 = Color3.fromRGB(0, 0, 0)
+                    Option.TextSize = 14.000
+                    Option.Visible = false
+
+                    UICorner_11.CornerRadius = UDim.new(0, 6)
+                    UICorner_11.Parent = Option
+
+                    Title_8.Name = "Title"
+                    Title_8.Parent = Option
+                    Title_8.AnchorPoint = Vector2.new(0, 0.5)
+                    Title_8.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+                    Title_8.BackgroundTransparency = 1.000
+                    Title_8.Position = UDim2.new(0.0441919193, 0, 0.5, 0)
+                    Title_8.Size = UDim2.new(0, 291, 0, 21)
+                    Title_8.Font = Enum.Font.GothamSemibold
+                    Title_8.Text = "• "..tostring(option)
+                    Title_8.TextColor3 =  theme.TextColor
+                    Title_8.TextSize = 14.000
+                    Title_8.TextXAlignment = Enum.TextXAlignment.Left
+                    
+                    -- إعادة ترتيب العناصر في التبويب
+                    local isFound = false
+                    for i,v in pairs(library2["Tabs"][name]) do 
+                        if type(v) == "table" then
+                            if v.Instance == Option then 
+                                isFound = true
+                            end
+                            if isFound and v.Instance ~= Option then 
+                                spawn(function()
+                                    local old = v.Instance.Parent
+                                    v.Instance.Parent = nil
+                                    v.Instance.Parent = old
+                                end)
+                            end
+                        end
+                    end
+                end
+                
+                -- تحديث حجم التبويب
+                Tab.CanvasSize = UDim2.new(0, Tab.AbsoluteSize.X, 0, UIListLayout_2.AbsoluteContentSize.Y)
+                
+                -- إعادة تعيين العنوان الأصلي
+                Title_7.Text = text
+            end
+
             function library4:RefreshOptions(options)
                 options = options or {}
                 for i,v in pairs(library4["Options"]) do 
@@ -1027,7 +1130,7 @@ function library:CreateMain(title, description, keycode)
                             for i,v in pairs(library4["Connections"]) do
                                 v:Disconnect()
                             end
-                            Dropdown.Title.Text = text.." - "..tostring(v.Value)
+                            Title_7.Text = text.." - "..tostring(v.Value)
                             for i2, v2 in pairs(library4["Options"]) do 
                                 v2.Instance.Visible = false
                             end
