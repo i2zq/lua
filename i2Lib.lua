@@ -17,6 +17,9 @@
 		Sec:AddToggle({ Name = "God Mode", Flag = "godmode", Callback = print })
 
 	Author: i2  •  License: MIT
+
+
+	its fcking built with claude, 100% Vibe Coded
 ================================================================================
 --]]
 
