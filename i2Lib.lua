@@ -1421,6 +1421,24 @@ define("Components", function(import)
 
 	local C = {}
 
+	-- Keybind capture rules (shared by Keybind + Toggle bind-to-key).
+	--   CLEAR_KEYS  -> pressing one of these clears the bind to None.
+	--   SKIP_KEYS   -> reserved/navigation keys that simply cancel the capture
+	--                  (the existing bind is kept) instead of being assigned.
+	local CLEAR_KEYS = {
+		[Enum.KeyCode.Escape] = true,
+		[Enum.KeyCode.Backspace] = true,
+		[Enum.KeyCode.Delete] = true,
+	}
+	local SKIP_KEYS = {
+		[Enum.KeyCode.Unknown] = true,
+		[Enum.KeyCode.Tab] = true,
+		[Enum.KeyCode.Return] = true,
+		[Enum.KeyCode.LeftSuper] = true,
+		[Enum.KeyCode.RightSuper] = true,
+		[Enum.KeyCode.Menu] = true,
+	}
+
 	-- Shared context fields expected on `ctx`:
 	--   theme, state, hotkeys, notify, parent (container Instance), maid
 	-- Each constructor returns a `handle` table.
@@ -1715,6 +1733,19 @@ define("Components", function(import)
 				return
 			end
 			if input.KeyCode == Enum.KeyCode.Unknown then return end
+			-- Escape clears the bind; other reserved keys cancel without binding.
+			if CLEAR_KEYS[input.KeyCode] then
+				awaiting = false
+				task.defer(function() ctx.hotkeys:EndCapture() end)
+				handle:Unbind()
+				if ctx.notify then ctx.notify:Push({ Type = "info", Title = "Keybind cleared" }) end
+				return
+			end
+			if SKIP_KEYS[input.KeyCode] then
+				awaiting = false
+				task.defer(function() ctx.hotkeys:EndCapture() end)
+				return
+			end
 			awaiting = false
 			task.defer(function() ctx.hotkeys:EndCapture() end)
 			-- Duplicate-key protection: don't steal a key already in use elsewhere.
@@ -2248,8 +2279,12 @@ define("Components", function(import)
 			task.defer(function() ctx.hotkeys:EndCapture() end)
 			Tween.to(bStroke, { Color = theme:Get("Border"), Transparency = 0.3 }, "Hover")
 			if input.KeyCode ~= Enum.KeyCode.Unknown then
-				if input.KeyCode == Enum.KeyCode.Backspace or input.KeyCode == Enum.KeyCode.Delete then
+				if CLEAR_KEYS[input.KeyCode] then
+					-- Escape / Backspace / Delete clear the keybind to None.
 					handle:Set(nil)
+				elseif SKIP_KEYS[input.KeyCode] then
+					-- Reserved key: cancel without changing the current bind.
+					btn.Text = key and ctx.hotkeys.KeyName(key) or "None"
 				else
 					handle:Set(input.KeyCode)
 				end
