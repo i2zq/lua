@@ -2607,7 +2607,15 @@ define("Config", function(import)
 		for k in pairs(_mem) do if k:find(folder, 1, true) == 1 then table.insert(out, k) end end
 		return out
 	end
-	local function fsMkDir(folder) if hasFS and typeof(makefolder) == "function" and typeof(isfolder)=="function" and not isfolder(folder) then safe(makefolder, folder) end end
+	-- NOTE: isfolder/makefolder yield on some executors. Both are wrapped in `safe`
+	-- (pcall) so they can never crash — including the "thread is not yieldable" error
+	-- raised if this somehow runs inside a C metamethod. Folder creation is also done
+	-- lazily (see Config:_ensureFolders) so Config.new performs no filesystem I/O.
+	local function fsMkDir(folder)
+		if hasFS and typeof(makefolder) == "function" and typeof(isfolder) == "function" then
+			if not safe(isfolder, folder) then safe(makefolder, folder) end
+		end
+	end
 
 	local Config = {}; Config.__index = Config
 	local SCHEMA_VERSION = 2
@@ -2620,9 +2628,19 @@ define("Config", function(import)
 		self.Theme = opts.Theme
 		self.Window = opts.Window
 		self.AutoSave = opts.AutoSave ~= false
+		-- Folders are created lazily on first write (NOT here): doing yielding
+		-- filesystem calls in Config.new can crash when Library.new is reached
+		-- through the Facade's __index metamethod, which is not yieldable.
+		return self
+	end
+
+	-- Create the config folders on demand. Always runs from a write call, which
+	-- happens in normal (yieldable) script/task context.
+	function Config:_ensureFolders()
+		if self._foldersReady then return end
+		self._foldersReady = true
 		fsMkDir(self.Folder)
 		fsMkDir(self.Folder .. "/configs")
-		return self
 	end
 
 	function Config:_path(name)
@@ -2663,6 +2681,7 @@ define("Config", function(import)
 	end
 
 	function Config:Save(name)
+		self:_ensureFolders()
 		local payload = self:Build()
 		local ok, encoded = pcall(HttpService.JSONEncode, HttpService, payload)
 		if not ok then return false, "encode failed" end
@@ -2686,10 +2705,12 @@ define("Config", function(import)
 
 	function Config:Delete(name) fsDelete(self:_path(name)); return true end
 	function Config:Rename(oldName, newName)
+		self:_ensureFolders()
 		local raw = fsRead(self:_path(oldName)); if not raw then return false end
 		fsWrite(self:_path(newName), raw); fsDelete(self:_path(oldName)); return true
 	end
 	function Config:Duplicate(name, newName)
+		self:_ensureFolders()
 		local raw = fsRead(self:_path(name)); if not raw then return false end
 		fsWrite(self:_path(newName or (name .. "_copy")), raw); return true
 	end
@@ -2732,7 +2753,7 @@ define("Config", function(import)
 	end
 
 	-- Track the "last used" config for auto-load on next launch.
-	function Config:SetLast(name) fsWrite(self.Folder .. "/last.txt", name or self.Name) end
+	function Config:SetLast(name) self:_ensureFolders(); fsWrite(self.Folder .. "/last.txt", name or self.Name) end
 	function Config:GetLast() return fsRead(self.Folder .. "/last.txt") end
 
 	return Config
