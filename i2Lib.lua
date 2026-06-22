@@ -1500,6 +1500,8 @@ define("Components", function(import)
 	-- Modern tooltip — glassy floating bubble at the screen root, cursor-tracked.
 	local function attachTooltip(ctx, gui, text)
 		if not text or text == "" then return end
+		-- Allow consumers to disable all hover tooltips via `library.NoTooltips`.
+		if ctx.library and ctx.library.NoTooltips then return end
 		local theme = ctx.theme
 		local root = ctx.root or gui
 		local tip, hovering
