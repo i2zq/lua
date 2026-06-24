@@ -1497,40 +1497,9 @@ define("Components", function(import)
 		return row, title, desc, textHolder
 	end
 
-	-- Modern tooltip — glassy floating bubble at the screen root, cursor-tracked.
-	local function attachTooltip(ctx, gui, text)
-		if not text or text == "" then return end
-		-- Allow consumers to disable all hover tooltips via `library.NoTooltips`.
-		if ctx.library and ctx.library.NoTooltips then return end
-		local theme = ctx.theme
-		local root = ctx.root or gui
-		local tip, hovering
-		local function show()
-			if tip then return end
-			hovering = true
-			tip = Create("TextLabel", {
-				Text = text, Font = theme:Get("Font"), TextSize = 12,
-				TextColor3 = theme:Get("Text"), BackgroundColor3 = theme:Get("Elevated"),
-				BackgroundTransparency = 0.04, AutomaticSize = Enum.AutomaticSize.XY, BorderSizePixel = 0,
-				TextWrapped = false, ZIndex = 9000, Parent = root,
-			})
-			P.padding(tip, 8); P.corner(tip, 7); P.stroke(tip, theme:Get("Accent"), 1, 0.4); P.shadow(tip, 0.4)
-			Create("UISizeConstraint", { MaxSize = Vector2.new(260, 200), Parent = tip })
-			tip.TextTransparency = 1
-			Tween.to(tip, { TextTransparency = 0 }, "Hover")
-		end
-		local function hide()
-			hovering = false
-			if tip then local t = tip; tip = nil; t:Destroy() end
-		end
-		ctx.maid:Give(gui.MouseEnter:Connect(show))
-		ctx.maid:Give(gui.MouseLeave:Connect(hide))
-		ctx.maid:Give(UserInputService.InputChanged:Connect(function(input)
-			if hovering and tip and input.UserInputType == Enum.UserInputType.MouseMovement then
-				tip.Position = UDim2.fromOffset(input.Position.X + 14, input.Position.Y + 16)
-			end
-		end))
-	end
+	-- Tooltips have been removed from the library entirely. This no-op stub is kept
+	-- so the existing internal call sites remain valid without creating any UI.
+	local function attachTooltip() end
 
 
 	----------------------------------------------------------------------------
@@ -3104,7 +3073,7 @@ define("Builders", function(import)
         self.MinBar = Create("CanvasGroup", {
             Name = "i2_MinBar", BackgroundColor3 = theme:Get("Background"), BackgroundTransparency = 0.2,
             GroupTransparency = 0, BorderSizePixel = 0, AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 20),
-            Size = UDim2.fromOffset(240, 40), ClipsDescendants = true, Parent = self.Gui, Visible = false,
+            Size = UDim2.fromOffset(280, 40), ClipsDescendants = true, Parent = self.Gui, Visible = false,
         })
         P.corner(self.MinBar, 10)
         local minBarStroke = P.stroke(self.MinBar, theme:Get("Border"), 1, 0.5)
@@ -3117,8 +3086,8 @@ define("Builders", function(import)
 
         local minTitle = Create("TextLabel", { BackgroundTransparency = 1, Text = opts.Title or "i2Library",
             Font = theme:Get("FontBold"), TextSize = 14, TextColor3 = theme:Get("Text"),
-            TextXAlignment = Enum.TextXAlignment.Left, Position = UDim2.fromOffset(16, 0),
-            Size = UDim2.new(1, -120, 1, 0), Parent = self.MinBar })
+            TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd,
+            Position = UDim2.fromOffset(16, 0), Size = UDim2.new(1, -96, 1, 0), Parent = self.MinBar })
         theme:Apply(minTitle, { TextColor3 = "Text" })
 
         local function ctlMinButton(assetId, order, hoverColor, glyph, callback)
