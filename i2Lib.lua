@@ -1804,10 +1804,10 @@ define("Components", function(import)
 		local value = opts.Default or options[1]
 		if opts.Flag and ctx.state:Get(opts.Flag) ~= nil then value = ctx.state:Get(opts.Flag) end
 
-		local card = P.card({ BackgroundColor3 = theme:Get("Surface"), Size = UDim2.new(1,0,0,0),
+		local card = P.card({ BackgroundColor3 = theme:Get("Surface"), BackgroundTransparency = 1, Size = UDim2.new(1,0,0,0),
 			AutomaticSize = Enum.AutomaticSize.Y, LayoutOrder = opts.LayoutOrder, Parent = ctx.parent })
 		theme:Apply(card, { BackgroundColor3 = "Surface" })
-		local cardStroke = P.stroke(card, theme:Get("Border"), 1, 0.4); theme:Apply(cardStroke, { Color = "Border" })
+		local cardStroke = P.stroke(card, theme:Get("Border"), 1, 0.35); theme:Apply(cardStroke, { Color = "Border" })
 		P.padding(card, 10)
 		Create("UIListLayout", { Padding = UDim.new(0, 6), SortOrder = Enum.SortOrder.LayoutOrder, Parent = card })
 		if opts.Name then
@@ -1821,7 +1821,7 @@ define("Components", function(import)
 		local function refresh()
 			for opt, dot in pairs(dots) do
 				local on = (opt == value)
-				Tween.to(dot.fill, { Size = on and UDim2.fromScale(0.5,0.5) or UDim2.fromScale(0,0) }, "Toggle")
+				Tween.to(dot.fill, { Size = on and UDim2.fromOffset(8,8) or UDim2.fromOffset(0,0) }, "Toggle")
 				Tween.to(dot.ring, { Color = on and theme:Get("Accent") or theme:Get("Border") }, "Hover")
 			end
 		end
@@ -1835,10 +1835,12 @@ define("Components", function(import)
 			-- Ring colour is driven by refresh()/hover, so it is intentionally not
 			-- registered with theme:Apply (mirrors the Toggle/Checkbox stroke handling).
 			local ring = P.stroke(circle, theme:Get("Border"), 2, 0)
+			-- Flat accent dot, sized in offsets and centred via AnchorPoint so it stays
+			-- perfectly concentric with the ring (a scale-sized + gradient dot read as
+			-- off-centre). Matches the solid indicators used by Toggle/Checkbox.
 			local fill = Create("Frame", { BackgroundColor3 = theme:Get("Accent"), BorderSizePixel = 0,
-				AnchorPoint = Vector2.new(0.5,0.5), Position = UDim2.fromScale(0.5,0.5), Size = UDim2.fromScale(0,0), Parent = circle })
-			P.corner(fill, 9); theme:Apply(fill, { BackgroundColor3 = "Accent" })
-			P.gradient(fill, ColorSequence.new(theme:Get("AccentDim"), theme:Get("AccentGlow")), 0)
+				AnchorPoint = Vector2.new(0.5,0.5), Position = UDim2.fromScale(0.5,0.5), Size = UDim2.fromOffset(0,0), Parent = circle })
+			P.corner(fill, 999); theme:Apply(fill, { BackgroundColor3 = "Accent" })
 			local optLabel = Create("TextLabel", { BackgroundTransparency = 1, Text = tostring(opt), Font = theme:Get("Font"),
 				TextSize = 13, TextColor3 = theme:Get("Text"), TextXAlignment = Enum.TextXAlignment.Left,
 				Position = UDim2.fromOffset(26, 0), Size = UDim2.new(1, -26, 1, 0), Parent = optRow })
@@ -2510,12 +2512,12 @@ define("Components", function(import)
 		local theme = ctx.theme
 		local holder = Create("Frame", { BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, opts.Height or 120),
 			LayoutOrder = opts.LayoutOrder, Parent = ctx.parent })
-		local img = Create("ImageLabel", { BackgroundColor3 = theme:Get("Surface"), BorderSizePixel = 0,
+		local img = Create("ImageLabel", { BackgroundColor3 = theme:Get("Surface"), BackgroundTransparency = 1, BorderSizePixel = 0,
 			Image = Icons.get(opts.Image) or opts.Image or "", ScaleType = opts.ScaleType or Enum.ScaleType.Fit,
 			AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5),
 			Size = UDim2.fromScale(1, 1), Parent = holder })
 		P.corner(img, opts.Corner or 8); theme:Apply(img, { BackgroundColor3 = "Surface" })
-		local imgStroke = P.stroke(img, theme:Get("Border"), 1, 0.4); theme:Apply(imgStroke, { Color = "Border" })
+		local imgStroke = P.stroke(img, theme:Get("Border"), 1, 0.35); theme:Apply(imgStroke, { Color = "Border" })
 		return { Instance = holder, Set = function(_, id) img.Image = Icons.get(id) or id end, Destroy = function() holder:Destroy() end }
 	end
 
@@ -2560,10 +2562,10 @@ define("Components", function(import)
 	function C.ProgressBar(ctx, opts)
 		local theme = ctx.theme
 		local value = Util.Clamp(opts.Default or 0, 0, 1)
-		local card = P.card({ BackgroundColor3 = theme:Get("Surface"), Size = UDim2.new(1,0,0, opts.Label and 44 or 24),
+		local card = P.card({ BackgroundColor3 = theme:Get("Surface"), BackgroundTransparency = 1, Size = UDim2.new(1,0,0, opts.Label and 44 or 24),
 			LayoutOrder = opts.LayoutOrder, Parent = ctx.parent })
 		theme:Apply(card, { BackgroundColor3 = "Surface" })
-		local cardStroke = P.stroke(card, theme:Get("Border"), 1, 0.4); theme:Apply(cardStroke, { Color = "Border" })
+		local cardStroke = P.stroke(card, theme:Get("Border"), 1, 0.35); theme:Apply(cardStroke, { Color = "Border" })
 		P.padding(card, 8)
 		local lbl
 		if opts.Label then
