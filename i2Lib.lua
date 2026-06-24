@@ -2936,41 +2936,11 @@ define("Builders", function(import)
 	function Section:Expand() self._collapsed = false; self:_applyCollapsed(true) end
 	function Section:IsCollapsed() return self._collapsed end
 
-	-- Component types that carry a persistable value. Anything here gets an
-	-- auto-generated Flag (when the caller didn't supply one) so the Config system
-	-- saves/restores it WITHOUT the plugin author having to tag every control.
-	local STATEFUL = {
-		Toggle = true, Checkbox = true, RadioGroup = true, Slider = true,
-		Dropdown = true, MultiDropdown = true, SearchDropdown = true, ComboBox = true,
-		List = true, Keybind = true, Textbox = true, ColorPicker = true,
-	}
-
-	-- Build a deterministic flag from where the control lives + its label, so the
-	-- SAME control gets the SAME flag on every run and saved configs map back. A
-	-- per-window counter disambiguates controls that share a label.
-	function Section:_autoFlag(componentType, opts)
-		local label = opts.Name or opts.Text or opts.Title or opts.Placeholder or componentType
-		local base = "auto:" .. tostring(self.Tab and self.Tab.Name) .. "/" .. tostring(self.Name)
-			.. "/" .. componentType .. "/" .. tostring(label)
-		local seen = self.Window._autoFlagSeen
-		if not seen then seen = {}; self.Window._autoFlagSeen = seen end
-		local n = (seen[base] or 0) + 1
-		seen[base] = n
-		return n > 1 and (base .. "#" .. n) or base
-	end
-
 	-- Generic add: Section:Add("Toggle", { ... }).
 	function Section:Add(componentType, opts)
 		local ctor = Components[componentType]
 		assert(ctor, "i2Library: unknown component type '" .. tostring(componentType) .. "'")
 		opts = opts or {}
-		-- Auto-tag stateful controls for config persistence. Skipped when: the caller
-		-- gave an explicit Flag, opted out via NoFlag/NoConfig, or this is the built-in
-		-- Settings tab (its theme/config controls are persisted by other means).
-		if opts.Flag == nil and not opts.NoFlag and not opts.NoConfig
-			and STATEFUL[componentType] and not (self.Tab and self.Tab._isSettings) then
-			opts.Flag = self:_autoFlag(componentType, opts)
-		end
 		local handle = ctor(self.ctx, opts)
 		return handle
 	end
@@ -2996,7 +2966,6 @@ define("Builders", function(import)
 		self.Name = opts.Name or "Tab"
 		self.Icon = opts.Icon
 		self.Category = opts.Category
-		self._isSettings = opts._isSettings
 		self.maid = Maid.new()
 		self.Sections = {}
 		local theme = window.Theme
@@ -3867,9 +3836,7 @@ function Library.new(opts)
 			self._autoSaveScheduled = true
 			task.delay(1.5, function()
 				self._autoSaveScheduled = false
-				-- Persist the live state AND mark it as the config to auto-load next
-				-- launch, so changes round-trip without ever needing a manual Save.
-				if self.Config.AutoSave then self.Config:Save(); self.Config:SetLast() end
+				if self.Config.AutoSave then self.Config:Save() end
 			end)
 		end)
 	end
