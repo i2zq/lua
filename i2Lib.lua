@@ -3165,12 +3165,13 @@ define("Builders", function(import)
 		P.corner(self.Sidebar, 12)
         local sbStroke = P.stroke(self.Sidebar, Color3.fromRGB(255, 255, 255), 1, 0.9)
 
-		-- Brand header.
+		-- Brand header. The title is clipped to the sidebar card (right padding) and
+		-- may wrap to two lines when there is no subtitle, so long game names stay in.
 		local brand = Create("Frame", { BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 56), Parent = self.Sidebar })
-		P.padding(brand, 0, { PaddingLeft = UDim.new(0, 16), PaddingTop = UDim.new(0, 14) })
-        Create("TextLabel", { BackgroundTransparency = 1, Text = opts.Title or "i2Library", Font = theme:Get("FontBold"), TextSize = 15, TextColor3 = theme:Get("Text"), TextXAlignment = Enum.TextXAlignment.Left, Position = UDim2.fromOffset(0, 0), Size = UDim2.new(1, 0, 0, 16), Parent = brand })
+		P.padding(brand, 0, { PaddingLeft = UDim.new(0, 16), PaddingRight = UDim.new(0, 14), PaddingTop = UDim.new(0, 13) })
+        Create("TextLabel", { BackgroundTransparency = 1, Text = opts.Title or "i2Library", Font = theme:Get("FontBold"), TextSize = 15, TextColor3 = theme:Get("Text"), TextXAlignment = Enum.TextXAlignment.Left, TextYAlignment = Enum.TextYAlignment.Top, TextWrapped = true, TextTruncate = Enum.TextTruncate.AtEnd, Position = UDim2.fromOffset(0, 0), Size = UDim2.new(1, 0, 0, opts.SubTitle and 16 or 32), Parent = brand })
         if opts.SubTitle then
-            Create("TextLabel", { BackgroundTransparency = 1, Text = opts.SubTitle, Font = theme:Get("Font"), TextSize = 11, TextColor3 = theme:Get("TextMuted"), TextXAlignment = Enum.TextXAlignment.Left, Position = UDim2.fromOffset(0, 16), Size = UDim2.new(1, 0, 0, 14), Parent = brand })
+            Create("TextLabel", { BackgroundTransparency = 1, Text = opts.SubTitle, Font = theme:Get("Font"), TextSize = 11, TextColor3 = theme:Get("TextMuted"), TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd, Position = UDim2.fromOffset(0, 18), Size = UDim2.new(1, 0, 0, 14), Parent = brand })
         end
 
 		-- Tab list (scrollable).
@@ -3338,9 +3339,12 @@ define("Builders", function(import)
 	end
 
 	function Window:AddTab(opts)
-		local tab = Tab.new(self, opts or {})
+		opts = opts or {}
+		local tab = Tab.new(self, opts)
 		table.insert(self.Tabs, tab)
-		if not self.ActiveTab then self:SelectTab(tab) end
+		-- Auto-select the first *user* tab as the default. The pinned Settings tab
+		-- is built before any user tabs, so it must NOT claim the default slot.
+		if not self.ActiveTab and not opts._isSettings then self:SelectTab(tab) end
 		return tab
 	end
 
@@ -3491,7 +3495,7 @@ define("Settings", function(import)
 	function Settings.build(window, library)
 		local theme = window.Theme
 		local cfg = library.Config
-		local tab = window:AddTab({ Name = "Settings", Icon = "settings", LayoutOrder = 999 })
+		local tab = window:AddTab({ Name = "Settings", Icon = "settings", LayoutOrder = 999, _isSettings = true })
 
 		--==[ Configuration Management ]==--
 		local cfgSec = tab:AddSection("Configuration")
