@@ -1807,12 +1807,14 @@ define("Components", function(import)
 		local card = P.card({ BackgroundColor3 = theme:Get("Surface"), Size = UDim2.new(1,0,0,0),
 			AutomaticSize = Enum.AutomaticSize.Y, LayoutOrder = opts.LayoutOrder, Parent = ctx.parent })
 		theme:Apply(card, { BackgroundColor3 = "Surface" })
-		P.stroke(card, theme:Get("Border"), 1, 0.4); P.padding(card, 10)
+		local cardStroke = P.stroke(card, theme:Get("Border"), 1, 0.4); theme:Apply(cardStroke, { Color = "Border" })
+		P.padding(card, 10)
 		Create("UIListLayout", { Padding = UDim.new(0, 6), SortOrder = Enum.SortOrder.LayoutOrder, Parent = card })
 		if opts.Name then
-			Create("TextLabel", { BackgroundTransparency = 1, Text = opts.Name, Font = theme:Get("FontBold"),
+			local nameLabel = Create("TextLabel", { BackgroundTransparency = 1, Text = opts.Name, Font = theme:Get("FontBold"),
 				TextSize = 14, TextColor3 = theme:Get("Text"), TextXAlignment = Enum.TextXAlignment.Left,
 				Size = UDim2.new(1, 0, 0, 16), Parent = card })
+			theme:Apply(nameLabel, { TextColor3 = "Text" })
 		end
 		local dots = {}
 		local handle = { Instance = card }
@@ -1830,14 +1832,25 @@ define("Components", function(import)
             AnchorPoint = Vector2.new(0, 0.5), Position = UDim2.new(0, 0, 0.5, 0),
 				Size = UDim2.fromOffset(18, 18), Parent = optRow })
 			P.corner(circle, 9)
+			-- Ring colour is driven by refresh()/hover, so it is intentionally not
+			-- registered with theme:Apply (mirrors the Toggle/Checkbox stroke handling).
 			local ring = P.stroke(circle, theme:Get("Border"), 2, 0)
 			local fill = Create("Frame", { BackgroundColor3 = theme:Get("Accent"), BorderSizePixel = 0,
 				AnchorPoint = Vector2.new(0.5,0.5), Position = UDim2.fromScale(0.5,0.5), Size = UDim2.fromScale(0,0), Parent = circle })
-			P.corner(fill, 9)
-			Create("TextLabel", { BackgroundTransparency = 1, Text = tostring(opt), Font = theme:Get("Font"),
+			P.corner(fill, 9); theme:Apply(fill, { BackgroundColor3 = "Accent" })
+			P.gradient(fill, ColorSequence.new(theme:Get("AccentDim"), theme:Get("AccentGlow")), 0)
+			local optLabel = Create("TextLabel", { BackgroundTransparency = 1, Text = tostring(opt), Font = theme:Get("Font"),
 				TextSize = 13, TextColor3 = theme:Get("Text"), TextXAlignment = Enum.TextXAlignment.Left,
 				Position = UDim2.fromOffset(26, 0), Size = UDim2.new(1, -26, 1, 0), Parent = optRow })
+			theme:Apply(optLabel, { TextColor3 = "Text" })
 			dots[opt] = { ring = ring, fill = fill }
+			-- Subtle hover feedback to match the new-style interactive rows.
+			ctx.maid:Give(optRow.MouseEnter:Connect(function()
+				if opt ~= value then Tween.to(ring, { Color = theme:Get("TextDim") }, "Hover") end
+			end))
+			ctx.maid:Give(optRow.MouseLeave:Connect(function()
+				if opt ~= value then Tween.to(ring, { Color = theme:Get("Border") }, "Hover") end
+			end))
 			optRow.MouseButton1Click:Connect(function() handle:Set(opt) end)
 		end
 		function handle:Set(v, fromState)
@@ -2501,7 +2514,8 @@ define("Components", function(import)
 			Image = Icons.get(opts.Image) or opts.Image or "", ScaleType = opts.ScaleType or Enum.ScaleType.Fit,
 			AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5),
 			Size = UDim2.fromScale(1, 1), Parent = holder })
-		P.corner(img, opts.Corner or 8)
+		P.corner(img, opts.Corner or 8); theme:Apply(img, { BackgroundColor3 = "Surface" })
+		local imgStroke = P.stroke(img, theme:Get("Border"), 1, 0.4); theme:Apply(imgStroke, { Color = "Border" })
 		return { Instance = holder, Set = function(_, id) img.Image = Icons.get(id) or id end, Destroy = function() holder:Destroy() end }
 	end
 
@@ -2525,11 +2539,17 @@ define("Components", function(import)
 			if ok then img.Image = content end
 		end)
 		if opts.Name ~= false then
+			-- opts.Name may be a string (explicit), nil, or `true` (auto-fetch). Only a
+			-- string is a usable label; anything else means "look it up from the userId".
 			local name = opts.Name
-			if not name then pcall(function() name = Players:GetNameFromUserIdAsync(userId) end) end
-			Create("TextLabel", { BackgroundTransparency = 1, Text = name or "Player", Font = theme:Get("FontBold"),
+			if type(name) ~= "string" then
+				name = nil
+				pcall(function() name = Players:GetNameFromUserIdAsync(userId) end)
+			end
+			local nameLabel = Create("TextLabel", { BackgroundTransparency = 1, Text = name or "Player", Font = theme:Get("FontBold"),
 				TextSize = 15, TextColor3 = theme:Get("Text"), TextXAlignment = Enum.TextXAlignment.Left,
 				Position = UDim2.fromOffset(size + 12, 0), Size = UDim2.new(1, -size-12, 1, 0), Parent = row })
+			theme:Apply(nameLabel, { TextColor3 = "Text" })
 		end
 		return { Instance = row, Destroy = function() row:Destroy() end }
 	end
@@ -2542,16 +2562,19 @@ define("Components", function(import)
 		local value = Util.Clamp(opts.Default or 0, 0, 1)
 		local card = P.card({ BackgroundColor3 = theme:Get("Surface"), Size = UDim2.new(1,0,0, opts.Label and 44 or 24),
 			LayoutOrder = opts.LayoutOrder, Parent = ctx.parent })
-		theme:Apply(card, { BackgroundColor3 = "Surface" }); P.stroke(card, theme:Get("Border"), 1, 0.4); P.padding(card, 8)
+		theme:Apply(card, { BackgroundColor3 = "Surface" })
+		local cardStroke = P.stroke(card, theme:Get("Border"), 1, 0.4); theme:Apply(cardStroke, { Color = "Border" })
+		P.padding(card, 8)
 		local lbl
 		if opts.Label then
 			lbl = Create("TextLabel", { BackgroundTransparency = 1, Text = opts.Label, Font = theme:Get("Font"),
 				TextSize = 12, TextColor3 = theme:Get("TextDim"), TextXAlignment = Enum.TextXAlignment.Left,
 				Size = UDim2.new(1, 0, 0, 14), Parent = card })
+			theme:Apply(lbl, { TextColor3 = "TextDim" })
 		end
 		local track = Create("Frame", { BackgroundColor3 = theme:Get("SurfaceAlt"), BorderSizePixel = 0,
 			AnchorPoint = Vector2.new(0,1), Position = UDim2.new(0,0,1,0), Size = UDim2.new(1, 0, 0, 8), Parent = card })
-		P.corner(track, 4)
+		P.corner(track, 4); theme:Apply(track, { BackgroundColor3 = "SurfaceAlt" })
 		local fill = Create("Frame", { BackgroundColor3 = theme:Get("Accent"), BorderSizePixel = 0,
 			Size = UDim2.fromScale(value, 1), Parent = track })
 		P.corner(fill, 4); theme:Apply(fill, { BackgroundColor3 = "Accent" })
