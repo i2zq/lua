@@ -1061,7 +1061,11 @@ define("Hotkeys", function(import)
 
 	function Hotkeys:_listen()
 		self._maid:Give(UserInputService.InputBegan:Connect(function(input, gpe)
-			if gpe then return end
+			-- NOTE: Roblox marks some keys (RightShift / LeftShift / Ctrl, etc.) as
+			-- `gameProcessedEvent = true` because the core scripts watch them (shift
+			-- lock). Blanket-ignoring gpe would make those keys unusable as hotkeys,
+			-- so we only bail when the player is actually typing in a text box.
+			if gpe and UserInputService:GetFocusedTextBox() then return end
 			self:_dispatch(input, true)
 		end))
 		self._maid:Give(UserInputService.InputEnded:Connect(function(input, gpe)
@@ -1695,7 +1699,10 @@ define("Components", function(import)
 		function handle:Unbind() boundKey = nil; ctx.hotkeys:Unbind(kbId) end
 		ctx.maid:Give(function() ctx.hotkeys:Unbind(kbId) end)
 		ctx.maid:Give(UserInputService.InputBegan:Connect(function(input, gpe)
-			if not awaiting or gpe then return end
+			-- Allow capturing keys Roblox flags as game-processed (e.g. RightShift);
+			-- only ignore real text input while a text box is focused.
+			if not awaiting then return end
+			if gpe and UserInputService:GetFocusedTextBox() then return end
 			-- Any non-keyboard input cancels the capture (and always releases capture
 			-- mode, so we never get stuck muting every hotkey).
 			if input.UserInputType ~= Enum.UserInputType.Keyboard then
@@ -2063,7 +2070,12 @@ define("Components", function(import)
 
 		local visibleCount = 0
 		local function rebuild(filter)
-			for _, b in pairs(optionButtons) do b:Destroy() end
+			-- Destroy by iterating the children we actually created (not a key->button
+			-- map): duplicate option values would otherwise overwrite a map entry and
+			-- leak the previous button, stacking copies in the list on every refresh.
+			for _, child in ipairs(listScroll:GetChildren()) do
+				if child:IsA("TextButton") then child:Destroy() end
+			end
 			table.clear(optionButtons)
 			visibleCount = 0
 			for i, item in ipairs(items) do
@@ -2674,8 +2686,21 @@ define("Config", function(import)
 		fsMkDir(self.Folder .. "/configs")
 	end
 
+	-- Normalize a config name into a safe, canonical file stem so the SAME logical
+	-- name always maps to the SAME file. Without this, "ESP", "ESP " (trailing
+	-- space) and "ESP/" would each create a separate file and the saved-config list
+	-- would fill up with near-duplicates of the same name.
+	function Config:_sanitize(name)
+		name = tostring(name or self.Name or "default")
+		name = name:gsub("[/\\:%*%?\"<>|%.]", " ")   -- strip path/illegal chars
+		name = name:gsub("%s+", " ")                  -- collapse whitespace runs
+		name = name:gsub("^%s*(.-)%s*$", "%1")        -- trim ends
+		if name == "" then name = "default" end
+		return name
+	end
+
 	function Config:_path(name)
-		return self.Folder .. "/configs/" .. (name or self.Name) .. ".json"
+		return self.Folder .. "/configs/" .. self:_sanitize(name or self.Name) .. ".json"
 	end
 
 	-- Build the full config payload from live state + theme + window geometry.
@@ -2748,10 +2773,13 @@ define("Config", function(import)
 
 	function Config:List()
 		local files = fsList(self.Folder .. "/configs")
-		local names = {}
+		local names, seen = {}, {}
 		for _, f in ipairs(files) do
 			local n = tostring(f):match("([^/\\]+)%.json$")
-			if n then table.insert(names, n) end
+			-- Dedup: some executors' listfiles return a path more than once (or with
+			-- mixed separators), which would otherwise stack duplicate names in the
+			-- dropdown. A set guard keeps each name exactly once.
+			if n and not seen[n] then seen[n] = true; table.insert(names, n) end
 		end
 		table.sort(names)
 		return names
@@ -2908,11 +2936,41 @@ define("Builders", function(import)
 	function Section:Expand() self._collapsed = false; self:_applyCollapsed(true) end
 	function Section:IsCollapsed() return self._collapsed end
 
+	-- Component types that carry a persistable value. Anything here gets an
+	-- auto-generated Flag (when the caller didn't supply one) so the Config system
+	-- saves/restores it WITHOUT the plugin author having to tag every control.
+	local STATEFUL = {
+		Toggle = true, Checkbox = true, RadioGroup = true, Slider = true,
+		Dropdown = true, MultiDropdown = true, SearchDropdown = true, ComboBox = true,
+		List = true, Keybind = true, Textbox = true, ColorPicker = true,
+	}
+
+	-- Build a deterministic flag from where the control lives + its label, so the
+	-- SAME control gets the SAME flag on every run and saved configs map back. A
+	-- per-window counter disambiguates controls that share a label.
+	function Section:_autoFlag(componentType, opts)
+		local label = opts.Name or opts.Text or opts.Title or opts.Placeholder or componentType
+		local base = "auto:" .. tostring(self.Tab and self.Tab.Name) .. "/" .. tostring(self.Name)
+			.. "/" .. componentType .. "/" .. tostring(label)
+		local seen = self.Window._autoFlagSeen
+		if not seen then seen = {}; self.Window._autoFlagSeen = seen end
+		local n = (seen[base] or 0) + 1
+		seen[base] = n
+		return n > 1 and (base .. "#" .. n) or base
+	end
+
 	-- Generic add: Section:Add("Toggle", { ... }).
 	function Section:Add(componentType, opts)
 		local ctor = Components[componentType]
 		assert(ctor, "i2Library: unknown component type '" .. tostring(componentType) .. "'")
 		opts = opts or {}
+		-- Auto-tag stateful controls for config persistence. Skipped when: the caller
+		-- gave an explicit Flag, opted out via NoFlag/NoConfig, or this is the built-in
+		-- Settings tab (its theme/config controls are persisted by other means).
+		if opts.Flag == nil and not opts.NoFlag and not opts.NoConfig
+			and STATEFUL[componentType] and not (self.Tab and self.Tab._isSettings) then
+			opts.Flag = self:_autoFlag(componentType, opts)
+		end
 		local handle = ctor(self.ctx, opts)
 		return handle
 	end
@@ -2938,6 +2996,7 @@ define("Builders", function(import)
 		self.Name = opts.Name or "Tab"
 		self.Icon = opts.Icon
 		self.Category = opts.Category
+		self._isSettings = opts._isSettings
 		self.maid = Maid.new()
 		self.Sections = {}
 		local theme = window.Theme
@@ -3241,7 +3300,8 @@ define("Builders", function(import)
 		self.ToggleKey = opts.ToggleKey or opts.MinimizeKey or Enum.KeyCode.BackSlash
 		self.Hotkeys:Reserve("__i2_toggle", self.ToggleKey)
 		self.maid:Give(UserInputService.InputBegan:Connect(function(input, gpe)
-			if gpe then return end
+			-- Honor gpe only for actual typing, so Shift/Ctrl toggle keys still work.
+			if gpe and UserInputService:GetFocusedTextBox() then return end
 			-- Ignore input while a keybind is being captured, otherwise assigning a
 			-- new toggle key would also trigger it on the very same press.
 			if self.Hotkeys:IsCapturing() then return end
@@ -3807,7 +3867,9 @@ function Library.new(opts)
 			self._autoSaveScheduled = true
 			task.delay(1.5, function()
 				self._autoSaveScheduled = false
-				if self.Config.AutoSave then self.Config:Save() end
+				-- Persist the live state AND mark it as the config to auto-load next
+				-- launch, so changes round-trip without ever needing a manual Save.
+				if self.Config.AutoSave then self.Config:Save(); self.Config:SetLast() end
 			end)
 		end)
 	end
