@@ -1642,11 +1642,64 @@ define("Components", function(import)
 		if opts.Flag and ctx.state:Get(opts.Flag) ~= nil then value = ctx.state:Get(opts.Flag) end
 		value = value and true or false
 
-		local row = baseRow(ctx, opts)
+		-- Toggles are expandable. The visible row is a header; an attached settings
+		-- panel (collapsed by default) holds nested controls. Every toggle ships with
+		-- at least a keybind control inside that panel, so the whole thing lives in an
+		-- auto-growing card rather than the fixed-height baseRow.
+		local card = P.card({
+			BackgroundColor3 = theme:Get("Surface"), BackgroundTransparency = 1,
+			Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y,
+			LayoutOrder = opts.LayoutOrder, Parent = ctx.parent,
+		})
+		theme:Apply(card, { BackgroundColor3 = "Surface" })
+		local cardStroke = P.stroke(card, theme:Get("Border"), 1, 0.35)
+		theme:Apply(cardStroke, { Color = "Border" })
+		Create("UIListLayout", { Padding = UDim.new(0, 0), SortOrder = Enum.SortOrder.LayoutOrder, Parent = card })
+
+		-- Header row: the clickable / hover surface. Left-click toggles the value,
+		-- right-click expands the settings panel.
+		local row = Create("TextButton", {
+			BackgroundColor3 = theme:Get("Surface"), BackgroundTransparency = 1, AutoButtonColor = false,
+			Text = "", Size = UDim2.new(1, 0, 0, 40), LayoutOrder = 0, Parent = card,
+		})
+		P.corner(row, 8)
+
+		local textHolder = Create("Frame", { BackgroundTransparency = 1, Position = UDim2.fromOffset(12, 0),
+			Size = UDim2.new(1, -24, 1, 0), Parent = row })
+		Create("UIListLayout", { VerticalAlignment = Enum.VerticalAlignment.Center,
+			Padding = UDim.new(0, 1), SortOrder = Enum.SortOrder.LayoutOrder, Parent = textHolder })
+		local title = Create("TextLabel", { BackgroundTransparency = 1, Text = opts.Name or opts.Text or "Toggle",
+			Font = theme:Get("FontBold"), TextSize = 14, TextColor3 = theme:Get("Text"),
+			TextXAlignment = Enum.TextXAlignment.Left, AutomaticSize = Enum.AutomaticSize.Y,
+			Size = UDim2.new(1, 0, 0, 16), Parent = textHolder })
+		theme:Apply(title, { TextColor3 = "Text" })
+		if opts.Description then
+			local desc = Create("TextLabel", { BackgroundTransparency = 1, Text = opts.Description,
+				Font = theme:Get("Font"), TextSize = 12, TextColor3 = theme:Get("TextDim"),
+				TextXAlignment = Enum.TextXAlignment.Left, TextWrapped = true,
+				AutomaticSize = Enum.AutomaticSize.Y, Size = UDim2.new(1, 0, 0, 14), Parent = textHolder })
+			theme:Apply(desc, { TextColor3 = "TextDim" })
+		end
+
+		-- Hover feedback (header only — never the expanded panel).
+		ctx.maid:Give(row.MouseEnter:Connect(function()
+			Tween.to(row, { BackgroundColor3 = theme:Get("SurfaceAlt"), BackgroundTransparency = 0.7 }, "Hover")
+		end))
+		ctx.maid:Give(row.MouseLeave:Connect(function()
+			Tween.to(row, { BackgroundColor3 = theme:Get("Surface"), BackgroundTransparency = 1 }, "Hover")
+		end))
+
+		-- Right-hand controls, right-aligned: [switch] [keybind tag] [expand arrow].
+		local controls = Create("Frame", { BackgroundTransparency = 1, AnchorPoint = Vector2.new(1, 0.5),
+			Position = UDim2.new(1, -12, 0.5, 0), Size = UDim2.new(0, 0, 1, 0),
+			AutomaticSize = Enum.AutomaticSize.X, Parent = row })
+		Create("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal,
+			HorizontalAlignment = Enum.HorizontalAlignment.Right, VerticalAlignment = Enum.VerticalAlignment.Center,
+			Padding = UDim.new(0, 8), SortOrder = Enum.SortOrder.LayoutOrder, Parent = controls })
+
 		local track = Create("Frame", {
-            BackgroundColor3 = theme:Get("SurfaceAlt"), BackgroundTransparency = 1, BorderSizePixel = 0,
-            AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -12, 0.5, 0),
-			Size = UDim2.fromOffset(42, 22), Parent = row,
+			BackgroundColor3 = theme:Get("SurfaceAlt"), BackgroundTransparency = 1, BorderSizePixel = 0,
+			Size = UDim2.fromOffset(42, 22), LayoutOrder = 1, Parent = controls,
 		})
 		P.corner(track, 11)
 		local trackStroke = P.stroke(track, theme:Get("Border"), 1, 0.2)
@@ -1657,7 +1710,37 @@ define("Components", function(import)
 		})
 		P.corner(knob, 8)
 
-		local handle = {}
+		-- Keybind tag: only parented (shown, left of the arrow) while a key is bound.
+		local keyTag = Create("TextLabel", { BackgroundColor3 = theme:Get("SurfaceAlt"), BackgroundTransparency = 0.4,
+			Text = "", Font = theme:Get("FontBold"), TextSize = 12, TextColor3 = theme:Get("Accent"),
+			AutomaticSize = Enum.AutomaticSize.X, Size = UDim2.new(0, 0, 0, 22), LayoutOrder = 2 })
+		P.corner(keyTag, 6); P.stroke(keyTag, theme:Get("Border"), 1, 0.3)
+		P.padding(keyTag, 0, { PaddingLeft = UDim.new(0, 8), PaddingRight = UDim.new(0, 8) })
+		ctx.maid:Give(keyTag)
+
+		-- Expand / collapse arrow (chevron, matching the dropdown icon).
+		local arrowBtn = Create("TextButton", { BackgroundTransparency = 1, AutoButtonColor = false, Text = "",
+			Size = UDim2.fromOffset(18, 18), LayoutOrder = 3, Parent = controls })
+		local arrow = Create("ImageLabel", { BackgroundTransparency = 1, Image = Icons.get("chevron-down") or "",
+			ImageColor3 = theme:Get("TextDim"), Size = UDim2.fromScale(1, 1), Parent = arrowBtn })
+
+		-- Settings panel (collapsed by default), with a thin top divider.
+		local panelClip = Create("Frame", { BackgroundTransparency = 1, ClipsDescendants = true,
+			Size = UDim2.new(1, 0, 0, 0), LayoutOrder = 1, Parent = card })
+		local panel = Create("Frame", { BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 0),
+			AutomaticSize = Enum.AutomaticSize.Y, Parent = panelClip })
+		Create("UIListLayout", { Padding = UDim.new(0, 0), SortOrder = Enum.SortOrder.LayoutOrder, Parent = panel })
+		local divider = Create("Frame", { BackgroundColor3 = theme:Get("Border"), BackgroundTransparency = 0.4,
+			BorderSizePixel = 0, Size = UDim2.new(1, 0, 0, 1), LayoutOrder = 0, Parent = panel })
+		theme:Apply(divider, { BackgroundColor3 = "Border" })
+		local panelBody = Create("Frame", { BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 0),
+			AutomaticSize = Enum.AutomaticSize.Y, LayoutOrder = 1, Parent = panel })
+		P.padding(panelBody, 0, { PaddingTop = UDim.new(0, 10), PaddingBottom = UDim.new(0, 12),
+			PaddingLeft = UDim.new(0, 10), PaddingRight = UDim.new(0, 6) })
+		P.listLayout(panelBody, 8)
+
+		local handle = { Instance = card }
+		handle.Changed = Signal.new()
 		local function visual(animate)
 			local spec = animate and "Toggle" or 0
 			if value then
@@ -1677,78 +1760,105 @@ define("Components", function(import)
 			if not fromState then
 				if opts.Flag then ctx.state:Push(opts.Flag, value) end
 			end
+			handle.Changed:Fire(value)
 			if opts.Callback then task.spawn(opts.Callback, value) end
 		end
 		function handle:Get() return value end
-		function handle:Destroy() row:Destroy() end
-		handle.Instance = row
-		handle.Changed = Signal.new()
-		local click = Create("TextButton", { BackgroundTransparency = 1, Text = "", Size = UDim2.fromScale(1,1), Parent = row })
-		click.MouseButton1Click:Connect(function()
-			handle:Set(not value)
-		end)
 
-		-- Right-click settings menu (bind-to-key, reset, etc.).
-		local boundKey
-		local kbId = (opts.Flag or Util.UID("tg")) .. "_menukey"
-		local awaiting = false
-		function handle:Bind(key)
-			boundKey = key
-			ctx.hotkeys:Bind(kbId, key, "Toggle", function() handle:Set(not value) end)
+		--==[ Expand / collapse the settings panel ]==--
+		local expanded = false
+		local function applyExpand(animate)
+			Tween.to(arrow, { Rotation = expanded and 180 or 0 }, "Hover")
+			if animate then
+				panelClip.ClipsDescendants = true
+				local fromH = panelClip.AbsoluteSize.Y
+				local toH = expanded and panel.AbsoluteSize.Y or 0
+				panelClip.AutomaticSize = Enum.AutomaticSize.None
+				panelClip.Size = UDim2.new(1, 0, 0, fromH)
+				Tween.to(panelClip, { Size = UDim2.new(1, 0, 0, toH) }, "Expand", function()
+					if expanded then
+						panelClip.AutomaticSize = Enum.AutomaticSize.Y
+						panelClip.ClipsDescendants = false
+					end
+				end)
+			elseif expanded then
+				panelClip.AutomaticSize = Enum.AutomaticSize.Y
+				panelClip.ClipsDescendants = false
+			else
+				panelClip.AutomaticSize = Enum.AutomaticSize.None
+				panelClip.Size = UDim2.new(1, 0, 0, 0)
+				panelClip.ClipsDescendants = true
+			end
 		end
-		function handle:Unbind() boundKey = nil; ctx.hotkeys:Unbind(kbId) end
-		ctx.maid:Give(function() ctx.hotkeys:Unbind(kbId) end)
-		ctx.maid:Give(UserInputService.InputBegan:Connect(function(input, gpe)
-			-- Allow capturing keys Roblox flags as game-processed (e.g. RightShift);
-			-- only ignore real text input while a text box is focused.
-			if not awaiting then return end
-			if gpe and UserInputService:GetFocusedTextBox() then return end
-			-- Any non-keyboard input cancels the capture (and always releases capture
-			-- mode, so we never get stuck muting every hotkey).
-			if input.UserInputType ~= Enum.UserInputType.Keyboard then
-				awaiting = false
-				task.defer(function() ctx.hotkeys:EndCapture() end)
-				return
-			end
-			if input.KeyCode == Enum.KeyCode.Unknown then return end
-			-- Escape clears the bind; other reserved keys cancel without binding.
-			if CLEAR_KEYS[input.KeyCode] then
-				awaiting = false
-				task.defer(function() ctx.hotkeys:EndCapture() end)
-				handle:Unbind()
-				if ctx.notify then ctx.notify:Push({ Type = "info", Title = "Keybind cleared" }) end
-				return
-			end
-			if SKIP_KEYS[input.KeyCode] then
-				awaiting = false
-				task.defer(function() ctx.hotkeys:EndCapture() end)
-				return
-			end
-			awaiting = false
-			task.defer(function() ctx.hotkeys:EndCapture() end)
-			-- Duplicate-key protection: don't steal a key already in use elsewhere.
-			if ctx.hotkeys:KeyInUse(input.KeyCode, kbId) then
-				if ctx.notify then ctx.notify:Push({ Type = "error", Title = "Key already in use",
-					Content = ctx.hotkeys.KeyName(input.KeyCode) .. " is already bound to another action." }) end
-				return
-			end
-			handle:Bind(input.KeyCode)
-			if ctx.notify then ctx.notify:Push({ Type = "success", Title = "Keybind set",
-				Content = "<b>" .. (opts.Name or "Toggle") .. "</b> bound to " .. tostring(input.KeyCode):gsub("Enum.KeyCode.", "") }) end
-		end))
-		if ctx.library then
-			click.MouseButton2Click:Connect(function()
-				ctx.library:ContextMenu({
-					{ Text = value and "Disable" or "Enable", Callback = function() handle:Set(not value) end },
-					{ Text = "Reset to default", Callback = function() handle:Set(opts.Default and true or false) end },
-					{ Text = boundKey and ("Rebind key (" .. tostring(boundKey):gsub("Enum.KeyCode.", "") .. ")") or "Bind to key",
-						Callback = function() awaiting = true; ctx.hotkeys:BeginCapture(); if ctx.notify then ctx.notify:Push({ Type = "info", Title = "Press a key...", Duration = 3 }) end end },
-					boundKey and { Text = "Clear keybind", Callback = function() handle:Unbind() end } or nil,
-				})
-			end)
+		local function setExpanded(state)
+			if expanded == state then return end
+			expanded = state
+			applyExpand(true)
+		end
+		function handle:Expand() setExpanded(true) end
+		function handle:Collapse() setExpanded(false) end
+		function handle:ToggleSettings() setExpanded(not expanded) end
+		function handle:IsExpanded() return expanded end
+
+		--==[ Nested settings controls (sliders / toggles / buttons / dropdowns…) ]==--
+		local panelCtx = {
+			theme = ctx.theme, state = ctx.state, hotkeys = ctx.hotkeys, notify = ctx.notify,
+			root = ctx.root, parent = panelBody, maid = ctx.maid,
+			library = ctx.library, window = ctx.window,
+		}
+		local function addControl(kind, o)
+			local ctor = C[kind]
+			assert(ctor, "i2Library: unknown component type '" .. tostring(kind) .. "'")
+			return ctor(panelCtx, o or {})
+		end
+		function handle:Add(kind, o) return addControl(kind, o) end
+		for _, n in ipairs({ "Label", "Paragraph", "Divider", "Button", "Toggle", "Checkbox",
+			"RadioGroup", "Code", "Slider", "Dropdown", "MultiDropdown", "SearchDropdown",
+			"Keybind", "Textbox", "ColorPicker", "Image", "Avatar", "ProgressBar", "Spinner" }) do
+			handle["Add" .. n] = function(_, o) return addControl(n, o) end
 		end
 
+		--==[ Default keybind control: binds a key that toggles this toggle ]==--
+		local function updateKeyTag(k)
+			if k then
+				keyTag.Text = ctx.hotkeys.KeyName(k)
+				keyTag.Parent = controls
+			else
+				keyTag.Parent = nil
+			end
+		end
+		local kbHandle
+		if not opts.NoKeybind then
+			kbHandle = addControl("Keybind", {
+				Name = opts.KeybindName or "Keybind",
+				Description = opts.KeybindDescription or "Bind a key to toggle this",
+				Mode = "Always", Default = opts.Key,
+				Flag = opts.Flag and (opts.Flag .. "__togglekey") or nil,
+				Callback = function() handle:Set(not value) end,
+				OnChanged = function(k) updateKeyTag(k) end,
+			})
+			updateKeyTag(kbHandle:Get())
+		end
+		function handle:SetKeybind(k) if kbHandle then kbHandle:Set(k) end end
+		function handle:GetKeybind() return kbHandle and kbHandle:Get() or nil end
+
+		--==[ Input wiring ]==--
+		arrowBtn.MouseEnter:Connect(function() Tween.to(arrow, { ImageColor3 = theme:Get("Text") }, "Hover") end)
+		arrowBtn.MouseLeave:Connect(function() Tween.to(arrow, { ImageColor3 = theme:Get("TextDim") }, "Hover") end)
+		arrowBtn.MouseButton1Click:Connect(function() handle:ToggleSettings() end)
+		arrowBtn.MouseButton2Click:Connect(function() handle:ToggleSettings() end)
+		row.MouseButton1Click:Connect(function() handle:Set(not value) end)
+		row.MouseButton2Click:Connect(function() handle:ToggleSettings() end)
+
+		-- Optional builder: opts.Build(handle) lets callers populate the panel inline.
+		if opts.Build then opts.Build(handle) end
+
+		applyExpand(false) -- start collapsed
 		visual(false)
+		function handle:Destroy()
+			if kbHandle then kbHandle:Destroy() end
+			card:Destroy()
+		end
 		if opts.Flag then ctx.state:Register(opts.Flag, handle, value) end
 		attachTooltip(ctx, row, opts.Tooltip or opts.Description or ("Toggle: " .. (opts.Name or "")))
 		return handle
@@ -2008,10 +2118,12 @@ define("Components", function(import)
 		-- Fixed/capped height + a real ScrollingFrame so long lists scroll.
 		local ITEM_H, GAP, MAX_VISIBLE = 30, 3, 6
 		local root = ctx.root or row
-		local popup = Create("Frame", { BackgroundColor3 = theme:Get("Elevated"), BackgroundTransparency = 0.04,
+		-- Transparent, glassy popup: just a tinted backdrop + a crisp outline (no drop
+		-- shadow), matching the rest of the UI's flat/outlined style.
+		local popup = Create("Frame", { BackgroundColor3 = theme:Get("Background"), BackgroundTransparency = 0.25,
 			Active = true, BorderSizePixel = 0, Visible = false, ClipsDescendants = true, ZIndex = 6000,
 			Size = UDim2.fromOffset(180, 0), Parent = root })
-		P.corner(popup, 10); P.stroke(popup, theme:Get("Border"), 1, 0.1); P.shadow(popup, 0.5)
+		P.corner(popup, 10); P.stroke(popup, theme:Get("Border"), 1.5, 0)
 
 		-- Inner content frame holds the UIListLayout. The shadow lives on `popup`
 		-- (which has no layout) so it never gets swept into the option list.
@@ -2083,7 +2195,7 @@ define("Components", function(import)
 				local key = type(item) == "table" and (item.Value ~= nil and item.Value or label) or item
 				if not filter or filter == "" or Util.Matches(label, filter) then
 					visibleCount += 1
-					local optBtn = Create("TextButton", { BackgroundColor3 = theme:Get("Surface"), BackgroundTransparency = 0.2,
+					local optBtn = Create("TextButton", { BackgroundColor3 = theme:Get("Surface"), BackgroundTransparency = 1,
 						AutoButtonColor = false, Text = "", Size = UDim2.new(1, 0, 0, ITEM_H), LayoutOrder = i, ZIndex = 6002, Parent = listScroll })
 					P.corner(optBtn, 7)
 					local tx = 10
@@ -2098,8 +2210,8 @@ define("Components", function(import)
 						TextSize = 14, TextColor3 = theme:Get("Accent"), TextTransparency = isSelected(key) and 0 or 1,
 						AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -8, 0.5, 0),
 						Size = UDim2.fromOffset(16, 16), ZIndex = 6003, Parent = optBtn })
-					optBtn.MouseEnter:Connect(function() Tween.to(optBtn, { BackgroundTransparency = 0 }, "Hover"); Tween.to(optBtn, { BackgroundColor3 = theme:Get("SurfaceAlt") }, "Hover") end)
-					optBtn.MouseLeave:Connect(function() Tween.to(optBtn, { BackgroundTransparency = 0.2 }, "Hover"); Tween.to(optBtn, { BackgroundColor3 = theme:Get("Surface") }, "Hover") end)
+					optBtn.MouseEnter:Connect(function() Tween.to(optBtn, { BackgroundTransparency = 0.15 }, "Hover"); Tween.to(optBtn, { BackgroundColor3 = theme:Get("SurfaceAlt") }, "Hover") end)
+					optBtn.MouseLeave:Connect(function() Tween.to(optBtn, { BackgroundTransparency = 1 }, "Hover"); Tween.to(optBtn, { BackgroundColor3 = theme:Get("Surface") }, "Hover") end)
 					optBtn.MouseButton1Click:Connect(function()
 						if multi then
 							value[key] = (not value[key]) or nil
@@ -3496,7 +3608,9 @@ define("Builders", function(import)
                 if t.Name == data.activeTab then self:SelectTab(t); break end
             end
         end
-        if data.minimized and not self.Minimized then self:Minimize() end
+        -- NOTE: the minimized state is intentionally NOT restored. The window must
+        -- always boot in its normal (open) state; auto-minimizing on load looked like
+        -- a bug (the UI would pop up, then immediately collapse to the min-bar).
     end
 
 	function Window:Destroy()
@@ -3720,10 +3834,11 @@ define("Dialogs", function(import)
 		local theme = library.Theme
 		local m = UserInputService:GetMouseLocation()
 		local W = 170
-		local menu = Create("Frame", { BackgroundColor3 = theme:Get("Elevated"), BackgroundTransparency = 0.04,
+		-- Transparent, glassy menu: tinted backdrop + crisp outline, no drop shadow.
+		local menu = Create("Frame", { BackgroundColor3 = theme:Get("Background"), BackgroundTransparency = 0.25,
 			BorderSizePixel = 0, Position = UDim2.fromOffset(m.X, m.Y), Size = UDim2.fromOffset(W, 0),
 			AutomaticSize = Enum.AutomaticSize.Y, ZIndex = 8500, Parent = library.Gui })
-		P.corner(menu, 10); P.stroke(menu, theme:Get("Border"), 1, 0.1); P.shadow(menu, 0.5)
+		P.corner(menu, 10); P.stroke(menu, theme:Get("Border"), 1.5, 0)
 		local scale = Create("UIScale", { Scale = 0.92, Parent = menu })
 		Tween.to(scale, { Scale = 1 }, "Expand")
 
