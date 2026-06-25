@@ -3173,6 +3173,11 @@ define("Builders", function(import)
         ctlMinButton("rbxassetid://10747384394", 1, theme:Get("Error"), nil, function() self:Close() end)
         ctlMinButton(nil, 2, nil, "+", function() self:Minimize() end)
 
+        -- The minimized card is draggable on its own. The control buttons sit on
+        -- top and swallow their own clicks, so grabbing the card body (or title)
+        -- moves it without triggering close/restore.
+        self:_enableDrag(self.MinBar, self.MinBar)
+
         self.Scale = Create("UIScale", { Scale = theme:Get("UIScale"), Parent = self.Main })
 		theme.Changed:Connect(function() self.Scale.Scale = theme:Get("UIScale") end)
 
@@ -3294,18 +3299,21 @@ define("Builders", function(import)
 		return self
 	end
 
-	function Window:_enableDrag(handle)
+	-- Drag `handle` to move `target` (defaults to the main window). Passing a
+	-- separate target lets the minimized state card be dragged on its own.
+	function Window:_enableDrag(handle, target)
+		target = target or self.Main
 		local dragging, dragStart, startPos
 		handle.InputBegan:Connect(function(input)
 			if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-				dragging = true; dragStart = input.Position; startPos = self.Main.Position
+				dragging = true; dragStart = input.Position; startPos = target.Position
 				input.Changed:Connect(function() if input.UserInputState == Enum.UserInputState.End then dragging = false end end)
 			end
 		end)
 		self.maid:Give(UserInputService.InputChanged:Connect(function(input)
 			if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
 				local d = input.Position - dragStart
-				self.Main.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + d.X, startPos.Y.Scale, startPos.Y.Offset + d.Y)
+				target.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + d.X, startPos.Y.Scale, startPos.Y.Offset + d.Y)
 			end
 		end))
 	end
