@@ -2467,14 +2467,26 @@ define("Components", function(import)
 		local value = opts.Default or ""
 		if opts.Flag and ctx.state:Get(opts.Flag) ~= nil then value = ctx.state:Get(opts.Flag) end
 
-		local row = baseRow(ctx, opts)
-        local box = Create("TextBox", { BackgroundColor3 = theme:Get("SurfaceAlt"), BackgroundTransparency = 1, Text = value,
+		-- Stacked layout: label (+desc) pinned to the top, full-width input box below it.
+		-- This guarantees the box never overlaps the label no matter how wide the control is
+		-- or how long the typed text gets (the old right-anchored fixed-width box overlapped
+		-- the label). ControlWidth is ignored here on purpose — the box spans the row.
+		local multi  = opts.MultiLine or false
+		local boxH   = multi and 60 or 30
+		local labelH = opts.Description and 32 or 16
+		local row, _t, _d, textHolder = baseRow(ctx, opts, 8 + labelH + 6 + boxH + 8)
+		textHolder.AnchorPoint = Vector2.new(0, 0)
+		textHolder.Position = UDim2.fromOffset(12, 8)
+		textHolder.Size = UDim2.new(1, -24, 0, labelH)
+        local box = Create("TextBox", { BackgroundColor3 = theme:Get("SurfaceAlt"), BackgroundTransparency = 0, Text = value,
             PlaceholderText = opts.Placeholder or "", PlaceholderColor3 = theme:Get("TextMuted"),
 			Font = theme:Get("Font"), TextSize = 13, TextColor3 = theme:Get("Text"),
-			ClearTextOnFocus = opts.ClearOnFocus or false, MultiLine = opts.MultiLine or false,
-			TextXAlignment = Enum.TextXAlignment.Left, TextWrapped = opts.MultiLine or false,
-			AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -12, 0.5, 0),
-			Size = UDim2.fromOffset(opts.ControlWidth or 160, 28), Parent = row })
+			ClearTextOnFocus = opts.ClearOnFocus or false, MultiLine = multi,
+			TextXAlignment = Enum.TextXAlignment.Left,
+			TextYAlignment = multi and Enum.TextYAlignment.Top or Enum.TextYAlignment.Center,
+			TextWrapped = multi, ClipsDescendants = true,
+			AnchorPoint = Vector2.new(0, 1), Position = UDim2.new(0, 12, 1, -8),
+			Size = UDim2.new(1, -24, 0, boxH), Parent = row })
 		P.corner(box, 6); local bStroke = P.stroke(box, theme:Get("Border"), 1, 0.3)
 		P.padding(box, 0, { PaddingLeft = UDim.new(0,8), PaddingRight = UDim.new(0,8) })
 		theme:Apply(box, { TextColor3 = "Text", BackgroundColor3 = "SurfaceAlt" })
