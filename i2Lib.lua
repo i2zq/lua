@@ -2478,7 +2478,7 @@ define("Components", function(import)
 		textHolder.AnchorPoint = Vector2.new(0, 0)
 		textHolder.Position = UDim2.fromOffset(12, 8)
 		textHolder.Size = UDim2.new(1, -24, 0, labelH)
-        local box = Create("TextBox", { BackgroundColor3 = theme:Get("SurfaceAlt"), BackgroundTransparency = 0, Text = value,
+        local box = Create("TextBox", { BackgroundColor3 = theme:Get("SurfaceAlt"), BackgroundTransparency = 1, Text = value,
             PlaceholderText = opts.Placeholder or "", PlaceholderColor3 = theme:Get("TextMuted"),
 			Font = theme:Get("Font"), TextSize = 13, TextColor3 = theme:Get("Text"),
 			ClearTextOnFocus = opts.ClearOnFocus or false, MultiLine = multi,
