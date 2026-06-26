@@ -1848,24 +1848,30 @@ define("Components", function(import)
 		arrowBtn.MouseLeave:Connect(function() Tween.to(arrow, { ImageColor3 = theme:Get("TextDim") }, "Hover") end)
 		arrowBtn.MouseButton1Click:Connect(function() handle:ToggleSettings() end)
 		arrowBtn.MouseButton2Click:Connect(function() handle:ToggleSettings() end)
-		-- Row input. Single tap/click flips the value; a quick DOUBLE tap/click opens
-		-- the settings panel. Double-tap is the primary way to reach a toggle's settings
-		-- on mobile/touch, where there is no right-click and the little arrow is fiddly
-		-- to hit. The second tap of a double-tap reverts the value the first tap applied,
-		-- so a double-tap leaves the toggle's value unchanged and just expands/collapses.
-		local DOUBLE_TAP_WINDOW = 0.32
-		local lastRowTap = 0
-		row.MouseButton1Click:Connect(function()
-			local now = os.clock()
-			if now - lastRowTap <= DOUBLE_TAP_WINDOW then
-				lastRowTap = 0
-				handle:Set(not value)        -- undo the first tap's toggle
-				handle:ToggleSettings()
-			else
-				lastRowTap = now
-				handle:Set(not value)
-			end
-		end)
+		-- Row input. Tapping/clicking the row flips the value. On MOBILE ONLY, a quick
+		-- double-tap opens the settings panel — it's the only way to reach settings on
+		-- touch (no right-click, and the little arrow is fiddly to hit). The second tap
+		-- reverts the value the first tap applied, so a double-tap leaves the value
+		-- unchanged and just expands/collapses. On PC we keep plain clicks (settings are
+		-- reached via the arrow or right-click), so rapid double-clicking just toggles.
+		local IS_MOBILE = UserInputService.TouchEnabled and not UserInputService.MouseEnabled
+		if IS_MOBILE then
+			local DOUBLE_TAP_WINDOW = 0.32
+			local lastRowTap = 0
+			row.MouseButton1Click:Connect(function()
+				local now = os.clock()
+				if now - lastRowTap <= DOUBLE_TAP_WINDOW then
+					lastRowTap = 0
+					handle:Set(not value)        -- undo the first tap's toggle
+					handle:ToggleSettings()
+				else
+					lastRowTap = now
+					handle:Set(not value)
+				end
+			end)
+		else
+			row.MouseButton1Click:Connect(function() handle:Set(not value) end)
+		end
 		row.MouseButton2Click:Connect(function() handle:ToggleSettings() end)
 
 		-- Optional builder: opts.Build(handle) lets callers populate the panel inline.
