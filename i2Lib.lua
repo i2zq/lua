@@ -1710,10 +1710,11 @@ define("Components", function(import)
 		})
 		P.corner(knob, 8)
 
-		-- Keybind tag: only parented (shown, left of the arrow) while a key is bound.
+		-- Keybind tag: only parented (shown) while a key is bound. LayoutOrder 0 puts it
+		-- LEFT of the toggle switch (and the arrow), not between them.
 		local keyTag = Create("TextLabel", { BackgroundColor3 = theme:Get("SurfaceAlt"), BackgroundTransparency = 0.4,
 			Text = "", Font = theme:Get("FontBold"), TextSize = 12, TextColor3 = theme:Get("Accent"),
-			AutomaticSize = Enum.AutomaticSize.X, Size = UDim2.new(0, 0, 0, 22), LayoutOrder = 2 })
+			AutomaticSize = Enum.AutomaticSize.X, Size = UDim2.new(0, 0, 0, 22), LayoutOrder = 0 })
 		P.corner(keyTag, 6); P.stroke(keyTag, theme:Get("Border"), 1, 0.3)
 		P.padding(keyTag, 0, { PaddingLeft = UDim.new(0, 8), PaddingRight = UDim.new(0, 8) })
 		ctx.maid:Give(keyTag)
@@ -2318,8 +2319,14 @@ define("Components", function(import)
 	----------------------------------------------------------------------------
 	function C.Keybind(ctx, opts)
 		local theme = ctx.theme
+		-- A cleared ("None") bind must survive save/load. nil can't be stored in the
+		-- state/config table (Lua drops nil values, so the flag vanishes and the bind
+		-- silently reverts to its Default on reload). So we persist a sentinel string
+		-- for None and translate it back to nil here.
+		local NONE = "__i2_none"
+		local function fromStore(v) if v == NONE then return nil end return v end
 		local key = opts.Default
-		if opts.Flag and ctx.state:Get(opts.Flag) ~= nil then key = ctx.state:Get(opts.Flag) end
+		if opts.Flag and ctx.state:Get(opts.Flag) ~= nil then key = fromStore(ctx.state:Get(opts.Flag)) end
 		local mode = opts.Mode or "Toggle"
 		local id = opts.Id or opts.Flag or Util.UID("kb")
 
@@ -2352,6 +2359,7 @@ define("Components", function(import)
 			end
 		end
 		function handle:Set(k, fromState)
+			k = fromStore(k) -- a restored "None" sentinel comes back as nil
 			-- Duplicate-key protection: refuse a key already claimed by another
 			-- action. Config restore (fromState) is exempt so saved setups load.
 			if k ~= nil and not fromState then
@@ -2368,7 +2376,8 @@ define("Components", function(import)
 			key = k
 			btn.Text = key and ctx.hotkeys.KeyName(key) or "None"
 			bindIt()
-			if not fromState and opts.Flag then ctx.state:Push(opts.Flag, key) end
+			-- Persist nil as the NONE sentinel so a cleared bind is remembered on reload.
+			if not fromState and opts.Flag then ctx.state:Push(opts.Flag, key ~= nil and key or NONE) end
 			if opts.OnChanged then task.spawn(opts.OnChanged, key) end
 		end
 		function handle:Get() return key end
