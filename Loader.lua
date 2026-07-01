@@ -10,7 +10,7 @@ elseif placeId == 10200395747 then
     loadstring(game:HttpGet("https://raw.githubusercontent.com/i2zq/lua/refs/heads/main/Games/Grow%20a%20Garden2.lua"))()
 elseif placeId == 9731911476 then
     loadstring(game:HttpGet("https://raw.githubusercontent.com/i2zq/lua/refs/heads/main/Games/Size%20Legends%20Simulator.lua"))()
-elseif placeId == 66654135 then
+elseif placeId == 142823291 then
     loadstring(game:HttpGet("https://raw.githubusercontent.com/i2zq/lua/refs/heads/main/Games/Murder%20Mystery%202.lua"))()
 else
     loadstring(game:HttpGet("https://raw.githubusercontent.com/i2zq/lua/refs/heads/main/main.lua"))()
